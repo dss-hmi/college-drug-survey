@@ -20,21 +20,27 @@ requireNamespace("corrplot")  # For asserting conditions meet expected patterns.
 # ---- load-sources ------------------------------------------------------------
 # Call `base::source()` on any repo file that defines functions needed below.  Ideally, no real operations are performed.
 source("./scripts/common-functions.R") # used in multiple reports
-source("./scripts/graph-presets.R") # fonts, colors, themes
+# source("./scripts/graph-presets.R") # fonts, colors, themes
 source("./scripts/graphing/graph-missing.R")
 baseSize = 8
-# ---- declare-globals ---------------------------------------------------------
+# ---- declare-globals ------------------------------------------------------
 config <- config::get()
 #set default ggplot theme
 ggplot2::theme_set(ggplot2::theme_bw())
 
 describe_item <- function(d, varname){
-  # d <- ds %>% select(id, Q9)
-  # d %>% glimpse()
-  # varname <- "Q9"
-
-  (variable_label <- labelled::var_label(d[,varname])[[1]])
-  d %>% histogram_discrete(varname)+labs(title = paste0(varname,": ",variable_label))
+  # browser()
+  # d <- ds1
+  # varname <- "Q2"
+  variable_label <- ds_meta %>%
+    dplyr::filter(item_name == varname ) %>%
+    dplyr::pull(item)
+  g <- d %>%
+    TabularManifest::histogram_discrete(varname)+
+    labs(
+      title = paste0(varname," : ", variable_label)
+    )
+  return(g)
 
 
   # d1 <- d %>%
@@ -58,6 +64,69 @@ describe_item <- function(d, varname){
 
 }
 
+
+make_corr_matrix <- function(d,metaData,item_names){
+  # d <- dsn
+  # metaData <- dto$metaData
+  # item_names <- varname_n_scale
+  #
+  # d %>% glimpse()
+  # d <- ds %>% dplyr::select(foc_01:foc_49)
+  d1 <- d %>% dplyr::select_(.dots=item_names)
+  d2 <- d1[complete.cases(d1),] %>%
+    dplyr::mutate(
+      total_score = rowSums(.)
+    )
+  # d2 %>% glimpse()
+  rownames <- metaData %>%
+    dplyr::filter(item_name %in% item_names) %>%
+    dplyr::mutate(display_name = paste0(item_name,"\n",item_label))
+
+  rownames <- rownames[,"display_name"]
+  rownames[nrow(rownames)+1,1]<- "total\nscore"
+  rownames <- rownames %>% as.list() %>% unlist() %>% as.character()
+
+  d3 <- sapply(d2, as.numeric)
+  # d3 %>% glimpse()
+  cormat <- cor(d3)
+  colnames(cormat) <- rownames; rownames(cormat) <- rownames
+  return(cormat)
+}
+
+make_corr_plot <- function (
+  corr,
+  lower="number",
+  upper="circle",
+  tl.pos=c("d","lt", "n"),
+  diag=c("n", "l", "u"),
+  bg="white",
+  addgrid.col="gray", ...
+){
+
+  diag <- match.arg(diag)
+  tl.pos <- match.arg(tl.pos)
+  n <- nrow(corr)
+  # corrplot::corrplot(corr, type="upper", method=upper, diag=TRUE, tl.pos=tl.pos, ...)
+  corrplot::corrplot(corr, type="upper", method=upper, diag=TRUE, tl.pos=tl.pos)
+  # corrplot::corrplot(corr, add=TRUE, type="lower", method=lower, diag=(diag == "l"), tl.pos="n", cl.pos="n", ...)
+  corrplot::corrplot(corr, add=TRUE, type="lower", method=lower, diag=(diag == "l"), tl.pos="n", cl.pos="n")
+  if (diag == "n" & tl.pos != "d") {
+    symbols(1:n, n:1, add=TRUE, bg=bg, fg=addgrid.col,  inches=FALSE, squares=rep(1, n))
+  }
+}
+# ---- load-data ---------------------------------------------------------------
+# the production of the dto object is now complete
+# we verify its structure and content:
+ds0 <- readr::read_csv(config$oud_survey)
+ds_meta <- readr::read_csv(config$survey_items)
+
+# ---- inspect-data -------------------------------------------------------------
+# ds0 %>% TabularManifest::histogram_discrete("Status")
+# ds0 %>% TabularManifest::histogram_continuous("Progress")
+# # ds0$`Duration (in seconds)` %>% summary()
+# ds0 %>% TabularManifest::histogram_discrete("Finished")
+
+# ---- add-new-names -----------------
 demographic <- c(
   "Q2"   = "institution"
   ,"Q16" = "class_standing"  # What is your class standing?
@@ -69,17 +138,6 @@ demographic <- c(
   ,"Q22" = "student_type"  # Mark all that apply to you.
   ,"Q23" = "field_of_study"  # Field of study (max = 2)?
 )
-# demographic <- c(
-#     "institution"
-#   ,"class_standing"  # What is your class standing?
-#   ,"age"  # What is your age?
-#   ,"race"  # What best describes your race/ethnicity? Mark all that apply.
-#   ,"gender"  # What best describes your gender?
-#   ,"political"  # What best describes your political leanings?
-#   ,"religion"  # How important is religion or spirituality to you?
-#   ,"student_type"  # Mark all that apply to you.
-#   ,"field_of_study"  # Field of study (max = 2)?
-# )
 methadone <- c(
   "Q7_1"  = "md_replace"
   ,"Q7_2" = "md_safe"
@@ -90,7 +148,6 @@ methadone <- c(
   ,"Q7_7" = "md_cravings"
   ,"Q7_8" = "md_from_high"
 )
-
 buprenorphine <- c(
   "Q8_1"  =  "br_replace"
   ,"Q8_2" =  "br_safe"
@@ -101,7 +158,6 @@ buprenorphine <- c(
   ,"Q8_7" =  "br_cravings"
   ,"Q8_8" =  "br_from_high"
 )
-
 naltrexone <- c(
   "Q9_1"  = "nt_replace"
   ,"Q9_2" = "nt_safe"
@@ -113,260 +169,215 @@ naltrexone <- c(
   ,"Q9_8" = "nt_from_high"
 
 )
-# ---- load-data ---------------------------------------------------------------
-# the production of the dto object is now complete
-# we verify its structure and content:
-ds0 <- readr::read_csv(config$oud_survey)
-meta <- readr::read_csv(config$survey_items)
-
-# ---- inspect-data -------------------------------------------------------------
-ds0 %>% TabularManifest::histogram_discrete("Status")
-ds0 %>% TabularManifest::histogram_continuous("Progress")
-ds0$`Duration (in seconds)` %>% summary()
-ds0 %>% TabularManifest::histogram_discrete("Finished")
-
-
-# ---- print-meta-1 ---------------------------
 varname_scale <- c(methadone, buprenorphine, naltrexone)
+selected_varnames <- c(demographic, varname_scale)
 
-# ---- tweak-data --------------------------------------------------------------
-ds1 <- ds0 %>%
-  dplyr::filter(
-    Status == "IP Address"
-    ,Finished == "TRUE"
-  ) %>%
+# add renaming convention
+ds_rename_guide <- tibble::tibble(
+  q_name = selected_varnames %>% names()
+  ,item_name = selected_varnames
+)
+ds_meta <- dplyr::left_join(
+  ds_meta
+  ,ds_rename_guide
+  ,by = c("q_name" = "q_name")
+) %>%
+  dplyr::select(q_name, item_name, dplyr::everything())
+
+# ---- tweak-data -----------------------------------------------------------
+
+
+# ---- tweak-data-1 ----------------------
+
+
+lvl_response <- c(
+  "2" =  "Strongly agree"
+  ,"1" = "Somewhat agree"
+  ,"0" = "Neutral"
+  ,"1" = "Somewhat disagree"
+  ,"2" = "Strongly disagree"
+  ,"99" = "Unsure"
+  ,"98" = "I choose not to answer"
+)
+
+# ---- -------------
+# d <- ds1 %>%
+#   dplyr::select(Q5, Q15_1)
+
+# ---- tweak-data-2 ---------------
+
+ds2 <- ds1 %>%
   dplyr::select(
     c(
       "ResponseId", "Status", "Progress", "Finished"
       ,names(demographic)
       ,names(varname_scale)
     )
-  ) %>%
-  dplyr::rename(
-    "institution"     = "Q2"
-    ,"class_standing" = "Q16"  # What is your class standing?
-    ,"age"            = "Q17"  # What is your age?
-    ,"race"           = "Q18"  # What best describes your race/ethnicity? Mark all that apply.
-    ,"gender"         = "Q19"  # What best describes your gender?
-    ,"political"      = "Q20"  # What best describes your political leanings?
-    ,"religion"       = "Q21"  # How important is religion or spirituality to you?
-    ,"student_type"   = "Q22"  # Mark all that apply to you.
-    ,"field_of_study" = "Q23"  # Field of study (max = 2)?
-
-    ,"md_replace"   = "Q7_1" # Treatment with methadone is replacing one addiction with another
-    ,"md_safe"      = "Q7_2" # Treatment with methadone is safe
-    ,"md_side_eff"  = "Q7_3" # Methadone has dangerous side effects
-    ,"md_not_recov" = "Q7_4" # People in methadone treatment are not actually in recovery
-    ,"md_bad_phys"  = "Q7_5" # Treatment with methadone is bad for you physically
-    ,"md_get_high"  = "Q7_6" # Most people in methadone treatment use it to get high
-    ,"md_cravings"  = "Q7_7" # Methadone helps prevent cravings for opioids
-    ,"md_from_high" = "Q7_8" # Methadone helps prevent individuals from getting high
-
-    ,"br_replace"   = "Q8_1" # Treatment with methadone is replacing one addiction with another
-    ,"br_safe"      = "Q8_2" # Treatment with methadone is safe
-    ,"br_side_eff"  = "Q8_3" # Methadone has dangerous side effects
-    ,"br_not_recov" = "Q8_4" # People in methadone treatment are not actually in recovery
-    ,"br_bad_phys"  = "Q8_5" # Treatment with methadone is bad for you physically
-    ,"br_get_high"  = "Q8_6" # Most people in methadone treatment use it to get high
-    ,"br_cravings"  = "Q8_7" # Methadone helps prevent cravings for opioids
-    ,"br_from_high" = "Q8_8" # Methadone helps prevent individuals from getting high
-    ,"nt_replace"   = "Q9_1" # Treatment with methadone is replacing one addiction with another
-    ,"nt_safe"      = "Q9_2" # Treatment with methadone is safe
-    ,"nt_side_eff"  = "Q9_3" # Methadone has dangerous side effects
-    ,"nt_not_recov" = "Q9_4" # People in methadone treatment are not actually in recovery
-    ,"nt_bad_phys"  = "Q9_5" # Treatment with methadone is bad for you physically
-    ,"nt_get_high"  = "Q9_6" # Most people in methadone treatment use it to get high
-    ,"nt_cravings"  = "Q9_7" # Methadone helps prevent cravings for opioids
-    ,"nt_from_high" = "Q9_8" # Methadone helps prevent individuals from getting high
   )
-ds1 %>% glimpse()
-ds <- ds1
+
+a <- c("aa","bb", "cc")
+rec <- " 'aa' = 'AA' "
+car::recode(a,rec )
+
+recode_guide <-
+"
+'Strongly agree'          = '2'
+;'Somewhat agree'         = '1'
+;'Neutral'                = '0'
+;'Somewhat disagree'      = '1'
+;'Strongly disagree'      = '2'
+;'Unsure'                 = '99'
+;'I choose not to answer' = '98'
+"
+recode_levels <- function(v){car::recode(v,recode_guide)}
+ds2 <- ds2 %>%
+  dplyr::mutate_all(recode_levels)
+
+
+d <- ds2 %>% select(names(methadone) )
+d <- ds2 %>% ryouready::recode2(vars = c("Q7_1","Q7_2"), recodes = recode_guide)
+library(car)
+library(ryouready)
+recode2(ds2,vars = 12:13, recodes = recode_guide )
+
+dd$Q7_1 <- car::recode(dd$Q7_1 , recodes = recode_guide)
+
+region,
+"
+      'central'  ='CN'
+      ;'southeast'='SE'
+      ;'northeast'='NE  '
+      "
+)
+
+a <- attitude
+rec <- "0:50=1; 51:70=2; 60:100=3; else=NA"
+recode2(a, recodes=rec)
+recode2(a, vars=1:2, recodes=rec)
+recode2(a, vars=c("rating", "complaints"), recodes=rec)
+
+
+for(i in vv ){
+  dd[,i] <- car::recode(dd[,i],  `Strongly agree` = "1")
+}
+dplyr::recode("Strongly agree" = "1")
+
+  ds2 %>% glimpse()
+  #
+  # dplyr::rename(
+  #   "institution"     = "Q2"
+  #   ,"class_standing" = "Q16"  # What is your class standing?
+  #   ,"age"            = "Q17"  # What is your age?
+  #   ,"race"           = "Q18"  # What best describes your race/ethnicity? Mark all that apply.
+  #   ,"gender"         = "Q19"  # What best describes your gender?
+  #   ,"political"      = "Q20"  # What best describes your political leanings?
+  #   ,"religion"       = "Q21"  # How important is religion or spirituality to you?
+  #   ,"student_type"   = "Q22"  # Mark all that apply to you.
+  #   ,"field_of_study" = "Q23"  # Field of study (max = 2)?
+  #
+  #   ,"md_replace"   = "Q7_1" # Treatment with methadone is replacing one addiction with another
+  #   ,"md_safe"      = "Q7_2" # Treatment with methadone is safe
+  #   ,"md_side_eff"  = "Q7_3" # Methadone has dangerous side effects
+  #   ,"md_not_recov" = "Q7_4" # People in methadone treatment are not actually in recovery
+  #   ,"md_bad_phys"  = "Q7_5" # Treatment with methadone is bad for you physically
+  #   ,"md_get_high"  = "Q7_6" # Most people in methadone treatment use it to get high
+  #   ,"md_cravings"  = "Q7_7" # Methadone helps prevent cravings for opioids
+  #   ,"md_from_high" = "Q7_8" # Methadone helps prevent individuals from getting high
+  #
+  #   ,"br_replace"   = "Q8_1" # Treatment with methadone is replacing one addiction with another
+  #   ,"br_safe"      = "Q8_2" # Treatment with methadone is safe
+  #   ,"br_side_eff"  = "Q8_3" # Methadone has dangerous side effects
+  #   ,"br_not_recov" = "Q8_4" # People in methadone treatment are not actually in recovery
+  #   ,"br_bad_phys"  = "Q8_5" # Treatment with methadone is bad for you physically
+  #   ,"br_get_high"  = "Q8_6" # Most people in methadone treatment use it to get high
+  #   ,"br_cravings"  = "Q8_7" # Methadone helps prevent cravings for opioids
+  #   ,"br_from_high" = "Q8_8" # Methadone helps prevent individuals from getting high
+  #
+  #   ,"nt_replace"   = "Q9_1" # Treatment with methadone is replacing one addiction with another
+  #   ,"nt_safe"      = "Q9_2" # Treatment with methadone is safe
+  #   ,"nt_side_eff"  = "Q9_3" # Methadone has dangerous side effects
+  #   ,"nt_not_recov" = "Q9_4" # People in methadone treatment are not actually in recovery
+  #   ,"nt_bad_phys"  = "Q9_5" # Treatment with methadone is bad for you physically
+  #   ,"nt_get_high"  = "Q9_6" # Most people in methadone treatment use it to get high
+  #   ,"nt_cravings"  = "Q9_7" # Methadone helps prevent cravings for opioids
+  #   ,"nt_from_high" = "Q9_8" # Methadone helps prevent individuals from getting high
+  # )
+ds2 %>% glimpse()
+
 # ---- basic-table --------------------------------------------------------------
 
 
 # ---- basic-graph --------------------------------------------------------------
+# q5 v q15
+
+d <- ds1 %>%
+  dplyr::select
+  ggplot(x =)
+
 
 # ---- survey-response -------------------------
 
 
-
 # ---- demographics -----------------------------------------
 cat("\n Sample size: ")
-ds$ResponseId %>% length() %>% unique()
+ds1$ResponseId %>% length() %>% unique()
 
 cat("\n\n")
 cat("## Sample characteristics\n")
-ds %>% describe_item("institution")
-ds %>% describe_item("class_standing")
-ds %>% describe_item("age")
-ds %>% describe_item("race")
-ds %>% describe_item("gender")
-ds %>% describe_item("political")
-ds %>% describe_item("religion")
-ds %>% describe_item("student_type")
-ds %>% describe_item("field_of_study")
 
-# ---- substance-use ---------------------
-cat("\n\n")
-cat("## Concerned about use\n")
-ds %>% describe_item("Q9")
+ds1 %>% describe_item("Q2")  #  = "institution"
+ds1 %>% describe_item("Q16") # = "class_standing"
+ds1 %>% describe_item("Q17") # = "age"
 
-cat("\n\n")
-cat("## Met my goal\n")
-ds %>% describe_item("Q11")
-
-# item Q12
-cat("\n\n")
-cat("## What helped - items \n")
-ds %>% describe_item("Q12_1")
-ds %>% describe_item("Q12_2")
-ds %>% describe_item("Q12_3")
-ds %>% describe_item("Q12_4")
-ds %>% describe_item("Q12_5")
-ds %>% describe_item("Q12_6")
-ds %>% describe_item("Q12_7")
-ds %>% describe_item("Q12_8")
-ds %>% describe_item("Q12_9")
-ds %>% describe_item("Q12_10")
-ds %>% describe_item("Q12_11")
-ds %>% describe_item("Q12_12")
-ds %>% describe_item("Q12_13")
-ds %>% describe_item("Q12_14")
-
-cat("\n\n")
-cat("## What helped - summary\n")
-vars_helped_goal <- paste0("Q12_",1:14)
-d1 <- ds %>%
-  dplyr::select(c("id",vars_helped_goal)) %>%
-  # dplyr::filter(id == "R_0Oi2kFZHx1kSxMd") %>%
-  # dplyr::filter(id %in% c("R_0Oi2kFZHx1kSxMd","R_0GMDW5Vmy3q3fHj")) %>%
-  tidyr::gather(key = "item", value = "response", vars_helped_goal) %>%
-  dplyr::select(-item) %>%
-  dplyr::distinct() %>%
-  dplyr::arrange(id) %>%
-  dplyr::group_by(id) %>%
-  dplyr::mutate( n_responses = n() ) %>%
-  dplyr::ungroup()
-# d1
-only_missing_response <- d1 %>%
-  dplyr::filter( n_responses == 1 & response == "(Missing)")
-only_nonmissing_response <- d1 %>%
-  dplyr::filter( n_responses > 1) %>%
-  dplyr::filter(!response == "(Missing)")
-
-d_q12 <- only_nonmissing_response %>%
-  dplyr::group_by(response) %>%
-  dplyr::summarize(n_freq = n()) %>%
-  dplyr::arrange(desc(n_freq))
-factor_levels <- d_q12$response %>% as.character()
-d_q12 <- d_q12 %>% dplyr::mutate(
-  response = factor(response, levels = factor_levels),
-  response = factor(response, levels = rev(levels(response)))
-  )
-
-d_q12 %>%
-  ggplot(aes(x = response, y = n_freq)) +
-  geom_bar(stat = "identity", alpha =  .5, fill = "salmon")+
-  geom_text(aes(label = n_freq))+
-  coord_flip()+
-  theme_bw()+
-  labs(title = paste0("Q12: ", labelled::var_label(ds$Q12_1), "\n (frequency of non-unique responses)") )
-
-cat("\n\n")
-cat("## What helped - Comments\n")
-# comments to Q12
-ds %>% dplyr::distinct(Q14) %>% neat()
-
-
-# item Q12
-
-ds %>% describe_item("Q13_1")
-ds %>% describe_item("Q13_2")
-ds %>% describe_item("Q13_3")
-ds %>% describe_item("Q13_4")
-ds %>% describe_item("Q13_5")
-ds %>% describe_item("Q13_6")
-ds %>% describe_item("Q13_7")
-ds %>% describe_item("Q13_8")
-ds %>% describe_item("Q13_9")
-ds %>% describe_item("Q13_10")
-ds %>% describe_item("Q13_11")
-ds %>% describe_item("Q13_12")
-ds %>% describe_item("Q13_13")
-
-cat("\n\n")
-cat("## What hindered - Summary\n")
-vars_hindered_goal <- paste0("Q13_",1:13)
-d1 <- ds %>%
-  dplyr::select(c("id",vars_hindered_goal)) %>%
-  # dplyr::filter(id == "R_0Oi2kFZHx1kSxMd") %>%
-  # dplyr::filter(id %in% c("R_0Oi2kFZHx1kSxMd","R_0GMDW5Vmy3q3fHj")) %>%
-  tidyr::gather(key = "item", value = "response", vars_hindered_goal) %>%
-  dplyr::select(-item) %>%
-  dplyr::distinct() %>%
-  dplyr::arrange(id) %>%
-  dplyr::group_by(id) %>%
-  dplyr::mutate( n_responses = n() ) %>%
-  dplyr::ungroup()
-# d1
-only_missing_response <- d1 %>%
-  dplyr::filter( n_responses == 1 & response == "(Missing)")
-only_nonmissing_response <- d1 %>%
-  dplyr::filter( n_responses > 1) %>%
-  dplyr::filter(!response == "(Missing)")
-
-d_q13 <- only_nonmissing_response %>%
-  dplyr::group_by(response) %>%
-  dplyr::summarize(n_freq = n()) %>%
-  dplyr::arrange(desc(n_freq))
-factor_levels <- d_q13$response %>% as.character()
-d_q13 <- d_q13 %>% dplyr::mutate(
-  response = factor(response, levels = factor_levels),
-  response = factor(response, levels = rev(levels(response)))
+cat("\n",
+  "Q18: ", (ds_meta %>% filter(item_name == "Q18") %>% pull(item)), "\n"
 )
+ds1 %>% dplyr::group_by(Q18) %>% count() %>% arrange(desc(n)) %>% neat()
+ds1 %>% dplyr::group_by(Q18) %>% count() %>% arrange(desc(n)) %>%
+  dplyr::mutate(
+    race = ifelse(n > 10, Q18, "Other")
+  ) %>%
+  dplyr::group_by(race) %>%
+  dplyr::summarize(
+    n = sum(n, na.rm = T)
+  ) %>% dplyr::ungroup() %>% dplyr::arrange(desc(n)) %>%
 
-d_q13 %>%
-  ggplot(aes(x = response, y = n_freq)) +
-  geom_bar(stat = "identity", alpha =  .5, fill = "lightblue")+
-  geom_text(aes(label = n_freq))+
-  coord_flip()+
-  theme_bw()+
-  labs(title = paste0("Q13: ", labelled::var_label(ds$Q13_1), "\n (frequency of non-unique responses)") )
-
-cat("\n\n")
-cat("## What hindered - Comments\n")
-# comments to Q13
-ds %>% dplyr::distinct(Q15) %>% neat()
-
-cat("\n\n")
-cat("## Craving (New)\n")
-# Q16
-ds %>% describe_item("Q16")
+  dplyr::filter(n>7) %>%
+  ggplot(aes(x=reorder(race,n) ,y=n ) )+
+  geom_col(fill = "salmon", alpha = .3, color = "black")+
+  coord_flip()
+ds1 %>% describe_item("Q19") # = "gender"
+ds1 %>% describe_item("Q20") # = "political"
+ds1 %>% describe_item("Q21") # = "religion"
+ds1 %>% dplyr::group_by(Q22) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
+cat("\n",
+    "Q23: ", (ds_meta %>% filter(item_name == "Q23") %>% pull(item)), "\n"
+)
+ds1 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
 
 
-# ---- q40 ------------------
-# ds %>% distinct(Q40)
-# cat("\n\n")
-# cat("## Craving (old)\n")
-# custom_levels <- c(
-#   "Moderate urge"
-#   ,"None at all"
-#   ,"MIld urge"
-#   ,"Slight, that is, a very mild urge"
-#   ,"Strong urge, but easily controlled"
-#   ,"Strong urge, would have used if available"
-#   ,"Strong urge and difficult to control"
-#   ,"(Missing)"
-# )
-# var_label <- labelled::var_label(ds$Q40)
-# ds <- ds %>%
-#   dplyr::mutate(
-#      Q40 = factor(Q40, levels = custom_levels)
-#     ) %>%
-#   dplyr::filter(!is.na(Q40))
-# labelled::var_label(ds$Q40) <- var_label
+# ---- methadone ---------------------
+cat("\n\n# Item Analysis: Methadone")
+# for(item_i in varname_e_scale[1:3]){
+for(item_i in names(methadone) ){
+  # item_i <- "Q7_1"
+  item_label <- ds_meta %>%
+    dplyr::filter(item_name == item_i ) %>%
+    dplyr::pull(short_label)
+  item_description <- ds_meta %>%
+    dplyr::filter(item_name == item_i ) %>%
+    dplyr::pull(item)
 
-ds %>% describe_item("Q40")
+  cat("\n\n")
+  cat("## ", item_i," - ", item_label)
+  # labelled::var_label(ds[item_i])
+  cat("\n\n")
+  item_description %>% print()
+  cat("\n\n")
+  ds1 %>% describe_item(item_i) %>% print()
+  cat("\n\n")
+}
+
 
 
 # ----- publisher --------------------
