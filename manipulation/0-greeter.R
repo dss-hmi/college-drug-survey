@@ -41,7 +41,7 @@ ds_names <- d_names %>% t %>% tibble::as_tibble() %>%
   dplyr::select(
     q_name, item_label, section, item_full_name
   )
-names(ds0) <- ds_names %>% dplyr::pull(item_name)
+names(ds0) <- ds_names %>% dplyr::pull(q_name)
 
 
 # ---- tweak-data ---------------------
