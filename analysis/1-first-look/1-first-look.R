@@ -185,24 +185,140 @@ ds_meta <- dplyr::left_join(
   dplyr::select(q_name, item_name, dplyr::everything())
 
 # ---- tweak-data -----------------------------------------------------------
+# recode into proper factors
+q_vars <- grep("^Q7",names(ds0), value = T)
+d1 <- ds0 %>% select(q_vars) %>% filter(!is.na(Q7_1))
 
-
-# ---- tweak-data-1 ----------------------
-
-
-lvl_response <- c(
-  "2" =  "Strongly agree"
-  ,"1" = "Somewhat agree"
-  ,"0" = "Neutral"
-  ,"1" = "Somewhat disagree"
-  ,"2" = "Strongly disagree"
+lvl_agreement <- c(
+  "2"   =  "Strongly agree"
+  ,"1"  = "Somewhat agree"
+  ,"0"  = "Neutral"
+  ,"-1" = "Somewhat disagree"
+  ,"-2" = "Strongly disagree"
   ,"99" = "Unsure"
   ,"98" = "I choose not to answer"
 )
 
+
+assign_levels <- function(x, lvl_codes){
+  x <- factor(x, levels = lvl_codes)
+  x <- forcats::fct_recode(x, lvl_agreement)
+}
+
+d2 <- d1 %>%
+  dplyr::mutate_at(vars(q_vars), funs(assign_levels))
+d2 %>% glimpse()
+
+
+lvl_agreement_recode <-
+"
+'Strongly agree'          = '2'
+;'Somewhat agree'         = '1'
+;'Neutral'                = '0'
+;'Somewhat disagree'      = '-1'
+;'Strongly disagree'      = '-2'
+;'Unsure'                 = '99'
+;'I choose not to answer' = '98'
+"
+lvl_agreement <- c(
+    "Strongly agree"         = "2"
+  , "Somewhat agree"         = "1"
+  , "Neutral"                = "0"
+  , "Somewhat disagree"      = "-1"
+  , "Strongly disagree"      = "-2"
+  , "Unsure"                 = "99"
+  , "I choose not to answer" = "98"
+)
+recode_values <- function(v, rec_guide){
+  car::recode(v,rec_guide)
+}
+recode_levels <- function(v, lvl_guide){
+  # factor(v, levels = as.integer(lvl_guide), labels = names(lvl_guide))
+  factor(v, levels = lvl_guide, labels = names(lvl_guide))
+}
+q_vars <- grep("^Q7",names(ds0), value = T)
+ds1 <- ds0 %>%
+  dplyr::select(q_vars) %>%
+  dplyr::filter(!is.na(Q7_1)) %>%
+  dplyr::mutate_at(q_vars, ~recode_values(., rec_guide = lvl_agreement_recode) ) %>%
+  dplyr::mutate_at(q_vars, as.character) %>%
+  dplyr::mutate_at(q_vars, ~recode_levels(., lvl_guide = lvl_agreement))
+
+d <- ds1 %>% select(Q7_1, Q7_2) %>%
+  dplyr::mutate(
+    q71 = as.integer(Q7_1)
+  )
+
+for(i in q_vars){
+  ds_meta %>% filter(q_name == i) %>% pull(item_label) %>% print()
+  ds0 %>% group_by(.dots = i) %>% count() %>% print()
+}
+q_vars <- grep("^Q4",names(ds0), value = T)
+ds2 <- ds1 %>%
+  # dplyr::mutate_at(vars(starts_with("Q4")) ,~factor(.,levels = lvl_knowledge))
+  dplyr::mutate_at(vars(starts_with("Q7")) ,~factor(.,levels = lvl_agreement))
+
+
+# Q4
+lvl_knowledge <- c(
+   "Very knowledgeable"
+  ,"Somewhat knowledgeable"
+  ,"I've never heard of this treatment"
+  ,"I choose not to answer"
+)
+
+# Q13, Q14
+lvl_knowledge2 <- c(
+  "Very knowledgeable"
+  ,"Somewhat knowledgeable"
+  ,"Not very knowledgeable"
+  ,"Never heard of it"
+  ,"I choose not to answer"
+)
+
+# Q6
+lvl_helpful <- c(
+    "Very helpful"
+  ,"Somewhat helpful"
+  ,"Neutral"
+  ,"Not very helpful"
+  ,"Not helpful at all"
+  ,"Unsure"
+  ,"I choose not to answer"
+)
+# Q11, Q12
+lvl_common <- c(
+  "Very common"
+  ,"Somewhat common"
+  ,"Rare"
+  ,"None existent"
+  ,"Unsure"
+  ,"I choose not to answer"
+)
+
+# Q7, Q8, Q9, Q10
+lvl_agreement <- c(
+  "Strongly agree"
+  ,"Somewhat agree"
+  ,"Neutral"
+  ,"Somewhat disagree"
+  ,"Strongly disagree"
+  ,"Unsure"
+  ,"I choose not to answer"
+)
+
+# Q15
+lvl_support <- c(
+   "Strongly support"
+  ,"Somewhat support"
+  ,"Neutral/no opinion"
+  ,"Somewhat oppose"
+  ,"Strongly oppose"
+  ,"Unsure"
+  ,"I choose not to answer"
+  ,"I don't know what this policy is/means"
+)
 # ---- -------------
-# d <- ds1 %>%
-#   dplyr::select(Q5, Q15_1)
 
 # ---- tweak-data-2 ---------------
 
@@ -219,19 +335,7 @@ a <- c("aa","bb", "cc")
 rec <- " 'aa' = 'AA' "
 car::recode(a,rec )
 
-recode_guide <-
-"
-'Strongly agree'          = '2'
-;'Somewhat agree'         = '1'
-;'Neutral'                = '0'
-;'Somewhat disagree'      = '1'
-;'Strongly disagree'      = '2'
-;'Unsure'                 = '99'
-;'I choose not to answer' = '98'
-"
-recode_levels <- function(v){car::recode(v,recode_guide)}
-ds2 <- ds2 %>%
-  dplyr::mutate_all(recode_levels)
+
 
 
 d <- ds2 %>% select(names(methadone) )
