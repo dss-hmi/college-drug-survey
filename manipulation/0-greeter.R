@@ -30,26 +30,40 @@ d_names <- readr::read_csv(path_file,col_names = F, n_max = 2)
 # ---- define-utility-functions ---------------
 ds_names <- d_names %>% t %>% tibble::as_tibble() %>%
   dplyr::rename(
-    "item_name" = "V1"
-    ,"item_label" = "V2"
+    "q_name" = "V1"
+    ,"item_full_name" = "V2"
   ) %>%
   dplyr::mutate(
-    item_label = gsub("\\n"," ",item_label)
-    ,section = gsub("(.+) - (.+)","\\1",item_label)
-    ,item = gsub("(.+) - (.+)","\\2",item_label)
+    item_full_name = gsub("\\n"," ",item_full_name)
+    ,section = gsub("(.+) - (.+)","\\1",item_full_name)
+    ,item_label = gsub("(.+) - (.+)","\\2",item_full_name)
   ) %>%
   dplyr::select(
-    item_name, item, section, item_label
+    q_name, item_label, section, item_full_name
   )
-
-
 names(ds0) <- ds_names %>% dplyr::pull(item_name)
+
+
 # ---- tweak-data ---------------------
-ds1 <- ds0 %>%
-  dplyr::rename(
-    "duration_in_seconds" = `Duration (in seconds)`
-  )
-ds1$d
+
+#
+# recode_guide <-
+#   "
+# 'Strongly agree'          = '2'
+# ;'Somewhat agree'         = '1'
+# ;'Neutral'                = '0'
+# ;'Somewhat disagree'      = '1'
+# ;'Strongly disagree'      = '2'
+# ;'Unsure'                 = '99'
+# ;'I choose not to answer' = '98'
+# "
+# recode_levels <- function(v){car::recode(v,recode_guide)}
+# ds2 <- ds2 %>%
+#   dplyr::mutate_all(recode_levels)
+#
+
+
+
 # ---- save-to-disk ----------------------------
 ds_names %>% readr::write_csv("./data-public/metadata/survey_items.csv")
 ds0 %>% readr::write_csv("./data-unshared/derived/oud_survey.csv")
