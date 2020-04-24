@@ -186,79 +186,6 @@ ds_meta <- dplyr::left_join(
 
 # ---- tweak-data -----------------------------------------------------------
 # recode into proper factors
-q_vars <- grep("^Q7",names(ds0), value = T)
-d1 <- ds0 %>% select(q_vars) %>% filter(!is.na(Q7_1))
-
-lvl_agreement <- c(
-  "2"   =  "Strongly agree"
-  ,"1"  = "Somewhat agree"
-  ,"0"  = "Neutral"
-  ,"-1" = "Somewhat disagree"
-  ,"-2" = "Strongly disagree"
-  ,"99" = "Unsure"
-  ,"98" = "I choose not to answer"
-)
-
-
-assign_levels <- function(x, lvl_codes){
-  x <- factor(x, levels = lvl_codes)
-  x <- forcats::fct_recode(x, lvl_agreement)
-}
-
-d2 <- d1 %>%
-  dplyr::mutate_at(vars(q_vars), funs(assign_levels))
-d2 %>% glimpse()
-
-
-lvl_agreement_recode <-
-"
-'Strongly agree'          = '2'
-;'Somewhat agree'         = '1'
-;'Neutral'                = '0'
-;'Somewhat disagree'      = '-1'
-;'Strongly disagree'      = '-2'
-;'Unsure'                 = '99'
-;'I choose not to answer' = '98'
-"
-lvl_agreement <- c(
-    "Strongly agree"         = "2"
-  , "Somewhat agree"         = "1"
-  , "Neutral"                = "0"
-  , "Somewhat disagree"      = "-1"
-  , "Strongly disagree"      = "-2"
-  , "Unsure"                 = "99"
-  , "I choose not to answer" = "98"
-)
-recode_values <- function(v, rec_guide){
-  car::recode(v,rec_guide)
-}
-recode_levels <- function(v, lvl_guide){
-  # factor(v, levels = as.integer(lvl_guide), labels = names(lvl_guide))
-  factor(v, levels = lvl_guide, labels = names(lvl_guide))
-}
-q_vars <- grep("^Q7",names(ds0), value = T)
-ds1 <- ds0 %>%
-  dplyr::select(q_vars) %>%
-  dplyr::filter(!is.na(Q7_1)) %>%
-  dplyr::mutate_at(q_vars, ~recode_values(., rec_guide = lvl_agreement_recode) ) %>%
-  dplyr::mutate_at(q_vars, as.character) %>%
-  dplyr::mutate_at(q_vars, ~recode_levels(., lvl_guide = lvl_agreement))
-
-d <- ds1 %>% select(Q7_1, Q7_2) %>%
-  dplyr::mutate(
-    q71 = as.integer(Q7_1)
-  )
-
-for(i in q_vars){
-  ds_meta %>% filter(q_name == i) %>% pull(item_label) %>% print()
-  ds0 %>% group_by(.dots = i) %>% count() %>% print()
-}
-q_vars <- grep("^Q4",names(ds0), value = T)
-ds2 <- ds1 %>%
-  # dplyr::mutate_at(vars(starts_with("Q4")) ,~factor(.,levels = lvl_knowledge))
-  dplyr::mutate_at(vars(starts_with("Q7")) ,~factor(.,levels = lvl_agreement))
-
-
 # Q4
 lvl_knowledge <- c(
    "Very knowledgeable"
@@ -266,7 +193,6 @@ lvl_knowledge <- c(
   ,"I've never heard of this treatment"
   ,"I choose not to answer"
 )
-
 # Q13, Q14
 lvl_knowledge2 <- c(
   "Very knowledgeable"
@@ -275,7 +201,6 @@ lvl_knowledge2 <- c(
   ,"Never heard of it"
   ,"I choose not to answer"
 )
-
 # Q6
 lvl_helpful <- c(
     "Very helpful"
@@ -286,6 +211,7 @@ lvl_helpful <- c(
   ,"Unsure"
   ,"I choose not to answer"
 )
+
 # Q11, Q12
 lvl_common <- c(
   "Very common"
@@ -306,7 +232,6 @@ lvl_agreement <- c(
   ,"Unsure"
   ,"I choose not to answer"
 )
-
 # Q15
 lvl_support <- c(
    "Strongly support"
@@ -318,7 +243,76 @@ lvl_support <- c(
   ,"I choose not to answer"
   ,"I don't know what this policy is/means"
 )
-# ---- -------------
+#Q16
+lvl_class_standing <- c(
+  "Graduate student/Professional student"
+  ,"Senior"
+  ,"Junior"
+  ,"Sophomore"
+  ,"Freshman"
+  ,"Non-degree seeking"
+  ,"I choose not to answer"
+)
+lvl_age <- c(
+   "61+ years old"
+  ,"51-60 years old"
+  ,"31-40 years old"
+  ,"21-30 years old"
+  ,"Under 20 years old"
+)
+lvl_gender <- c(
+  "Female"
+  ,"Male"
+  ,"Other"
+  ,"I choose not to answer"
+)
+lvl_political <- c(
+   "Democrat"
+  ,"Republican"
+  ,"Independent/moderate"
+  ,"Libertarian"
+  ,"Very conservative"
+  ,"Very liberal"
+  ,"Somewhat conservative"
+  ,"Somewhat liberal"
+  ,"Other"
+  ,"Unsure"
+  ,"I choose not to answer"
+)
+lvl_religion <- c(
+   "Very important"
+  ,"Moderately important"
+  ,"Not important"
+  ,"I choose not to answer"
+  ,"Unsure"
+)
+ds1 <- ds0 %>%
+  dplyr::mutate_at(vars(starts_with("Q4"))  ,~factor(.,levels = lvl_knowledge)) %>%
+  dplyr::mutate_at(vars(starts_with("Q13")) ,~factor(.,levels = lvl_knowledge2)) %>%
+  dplyr::mutate_at(vars(starts_with("Q14")) ,~factor(.,levels = lvl_knowledge2)) %>%
+  dplyr::mutate_at(vars(starts_with("Q6"))  ,~factor(.,levels = lvl_helpful)) %>%
+  dplyr::mutate_at(vars(starts_with("Q11")) ,~factor(.,levels = lvl_common)) %>%
+  dplyr::mutate_at(vars(starts_with("Q12")) ,~factor(.,levels = lvl_common)) %>%
+  dplyr::mutate_at(vars(starts_with("Q7"))  ,~factor(.,levels = lvl_agreement)) %>%
+  dplyr::mutate_at(vars(starts_with("Q8"))  ,~factor(.,levels = lvl_agreement)) %>%
+  dplyr::mutate_at(vars(starts_with("Q9"))  ,~factor(.,levels = lvl_agreement)) %>%
+  dplyr::mutate_at(vars(starts_with("Q10")) ,~factor(.,levels = lvl_agreement)) %>%
+  dplyr::mutate_at(vars(starts_with("Q15")) ,~factor(.,levels = lvl_support)) %>%
+  dplyr::mutate(
+    Q16 = factor(Q16, levels = lvl_class_standing)
+    ,Q17 = factor(Q17, levels = lvl_age)
+    ,Q19 = factor(Q19, levels = lvl_gender)
+    ,Q20 = factor(Q20, levels = lvl_political)
+    ,Q21 = factor(Q21, levels = lvl_religion)
+
+  )
+ds1 %>% group_by(Q5)  %>% count() # too granular to factorize, needs grouping
+ds1 %>% group_by(Q18) %>% count() # too granular to factorize, needs grouping
+ds1 %>% group_by(Q21) %>% count() # too granular to factorize, needs grouping
+ds1 %>% group_by(Q22) %>% count() # too granular to factorize, needs grouping
+ds1 %>% group_by(Q23) %>% count() # too granular to factorize, needs grouping
+
+ds1 %>% glimpse()
 
 # ---- tweak-data-2 ---------------
 
