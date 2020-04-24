@@ -40,13 +40,16 @@ ds_names <- d_names %>% t %>% tibble::as_tibble() %>%
   ) %>%
   dplyr::select(
     item_name, item, section, item_label
-  ) %>%
-  readr::write_csv("./data-unshared/derived/survey_items.csv")
+  )
 
 
 names(ds0) <- ds_names %>% dplyr::pull(item_name)
-
-
+# ---- tweak-data ---------------------
+ds1 <- ds0 %>%
+  dplyr::rename(
+    "duration_in_seconds" = `Duration (in seconds)`
+  )
+ds1$d
 # ---- save-to-disk ----------------------------
-
-ds <- read.csv(path_file)
+ds_names %>% readr::write_csv("./data-public/metadata/survey_items.csv")
+ds0 %>% readr::write_csv("./data-unshared/derived/oud_survey.csv")
