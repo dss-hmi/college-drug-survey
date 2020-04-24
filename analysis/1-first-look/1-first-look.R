@@ -1,24 +1,15 @@
-# knitr::stitch_rmd(script="./___/___.R", output="./___/___/___.md")
-#These first few lines run only when the file is run in RStudio, !!NOT when an Rmd/Rnw file calls it!!
+
 rm(list=ls(all=TRUE))  #Clear the variables from previous runs.
 cat("\f") # clear console
 
 # ---- load-packages -----------------------------------------------------------
-# Attach these packages so their functions don't need to be qualified: http://r-pkgs.had.co.nz/namespace.html#search-path
 library(magrittr) # enables piping : %>%
 library(ggplot2)
 library(dplyr)
-# Verify these packages are available on the machine, but their functions need to be qualified: http://r-pkgs.had.co.nz/namespace.html#search-path
-requireNamespace("ggplot2") # graphing
-requireNamespace("readr")   # data input
-requireNamespace("tidyr")   # data manipulation
-requireNamespace("dplyr")   # Avoid attaching dplyr, b/c its function names conflict with a lot of packages (esp base, stats, and plyr).
-requireNamespace("testit")  # For asserting conditions meet expected patterns.
-requireNamespace("corrplot")  # For asserting conditions meet expected patterns.
-# requireNamespace("car")     # For it's `recode()` function.
+requireNamespace("tidyr")# data manipulation
+requireNamespace("car")  # For it's `recode()` function.
 
 # ---- load-sources ------------------------------------------------------------
-# Call `base::source()` on any repo file that defines functions needed below.  Ideally, no real operations are performed.
 source("./scripts/common-functions.R") # used in multiple reports
 # source("./scripts/graph-presets.R") # fonts, colors, themes
 source("./scripts/graphing/graph-missing.R")
@@ -63,7 +54,6 @@ describe_item <- function(d, varname){
   # cat("\nMissing: ",sum(is.na(d[,varname])),"\n")
 
 }
-
 
 make_corr_matrix <- function(d,metaData,item_names){
   # d <- dsn
@@ -121,10 +111,6 @@ ds0 <- readr::read_csv(config$oud_survey)
 ds_meta <- readr::read_csv(config$survey_items)
 
 # ---- inspect-data -------------------------------------------------------------
-# ds0 %>% TabularManifest::histogram_discrete("Status")
-# ds0 %>% TabularManifest::histogram_continuous("Progress")
-# # ds0$`Duration (in seconds)` %>% summary()
-# ds0 %>% TabularManifest::histogram_discrete("Finished")
 
 # ---- add-new-names -----------------
 demographic <- c(
@@ -286,6 +272,11 @@ lvl_religion <- c(
   ,"I choose not to answer"
   ,"Unsure"
 )
+lvl_institution <- c(
+  "Indiana University-Bloomington"
+  ,"University of Central Florida"
+  ,"Other"
+)
 ds1 <- ds0 %>%
   dplyr::mutate_at(vars(starts_with("Q4"))  ,~factor(.,levels = lvl_knowledge)) %>%
   dplyr::mutate_at(vars(starts_with("Q13")) ,~factor(.,levels = lvl_knowledge2)) %>%
@@ -299,122 +290,110 @@ ds1 <- ds0 %>%
   dplyr::mutate_at(vars(starts_with("Q10")) ,~factor(.,levels = lvl_agreement)) %>%
   dplyr::mutate_at(vars(starts_with("Q15")) ,~factor(.,levels = lvl_support)) %>%
   dplyr::mutate(
-    Q16 = factor(Q16, levels = lvl_class_standing)
+     Q2 = factor(Q2, levels = lvl_institution)
+    ,Q16 = factor(Q16, levels = lvl_class_standing)
     ,Q17 = factor(Q17, levels = lvl_age)
     ,Q19 = factor(Q19, levels = lvl_gender)
     ,Q20 = factor(Q20, levels = lvl_political)
     ,Q21 = factor(Q21, levels = lvl_religion)
 
   )
-ds1 %>% group_by(Q5)  %>% count() # too granular to factorize, needs grouping
-ds1 %>% group_by(Q18) %>% count() # too granular to factorize, needs grouping
-ds1 %>% group_by(Q21) %>% count() # too granular to factorize, needs grouping
-ds1 %>% group_by(Q22) %>% count() # too granular to factorize, needs grouping
-ds1 %>% group_by(Q23) %>% count() # too granular to factorize, needs grouping
-
-ds1 %>% glimpse()
+# too granular
+# ds1 %>% group_by(Q5)  %>% count() # too granular to factorize, needs grouping
+# ds1 %>% group_by(Q18) %>% count() # too granular to factorize, needs grouping
+# ds1 %>% group_by(Q21) %>% count() # too granular to factorize, needs grouping
+# ds1 %>% group_by(Q22) %>% count() # too granular to factorize, needs grouping
+# ds1 %>% group_by(Q23) %>% count() # too granular to factorize, needs grouping
+#
+# ds1 %>% glimpse()
 
 # ---- tweak-data-2 ---------------
 
-ds2 <- ds1 %>%
-  dplyr::select(
-    c(
-      "ResponseId", "Status", "Progress", "Finished"
-      ,names(demographic)
-      ,names(varname_scale)
-    )
-  )
-
-a <- c("aa","bb", "cc")
-rec <- " 'aa' = 'AA' "
-car::recode(a,rec )
-
-
-
-
-d <- ds2 %>% select(names(methadone) )
-d <- ds2 %>% ryouready::recode2(vars = c("Q7_1","Q7_2"), recodes = recode_guide)
-library(car)
-library(ryouready)
-recode2(ds2,vars = 12:13, recodes = recode_guide )
-
-dd$Q7_1 <- car::recode(dd$Q7_1 , recodes = recode_guide)
-
-region,
-"
-      'central'  ='CN'
-      ;'southeast'='SE'
-      ;'northeast'='NE  '
-      "
-)
-
-a <- attitude
-rec <- "0:50=1; 51:70=2; 60:100=3; else=NA"
-recode2(a, recodes=rec)
-recode2(a, vars=1:2, recodes=rec)
-recode2(a, vars=c("rating", "complaints"), recodes=rec)
-
-
-for(i in vv ){
-  dd[,i] <- car::recode(dd[,i],  `Strongly agree` = "1")
-}
-dplyr::recode("Strongly agree" = "1")
-
-  ds2 %>% glimpse()
-  #
-  # dplyr::rename(
-  #   "institution"     = "Q2"
-  #   ,"class_standing" = "Q16"  # What is your class standing?
-  #   ,"age"            = "Q17"  # What is your age?
-  #   ,"race"           = "Q18"  # What best describes your race/ethnicity? Mark all that apply.
-  #   ,"gender"         = "Q19"  # What best describes your gender?
-  #   ,"political"      = "Q20"  # What best describes your political leanings?
-  #   ,"religion"       = "Q21"  # How important is religion or spirituality to you?
-  #   ,"student_type"   = "Q22"  # Mark all that apply to you.
-  #   ,"field_of_study" = "Q23"  # Field of study (max = 2)?
-  #
-  #   ,"md_replace"   = "Q7_1" # Treatment with methadone is replacing one addiction with another
-  #   ,"md_safe"      = "Q7_2" # Treatment with methadone is safe
-  #   ,"md_side_eff"  = "Q7_3" # Methadone has dangerous side effects
-  #   ,"md_not_recov" = "Q7_4" # People in methadone treatment are not actually in recovery
-  #   ,"md_bad_phys"  = "Q7_5" # Treatment with methadone is bad for you physically
-  #   ,"md_get_high"  = "Q7_6" # Most people in methadone treatment use it to get high
-  #   ,"md_cravings"  = "Q7_7" # Methadone helps prevent cravings for opioids
-  #   ,"md_from_high" = "Q7_8" # Methadone helps prevent individuals from getting high
-  #
-  #   ,"br_replace"   = "Q8_1" # Treatment with methadone is replacing one addiction with another
-  #   ,"br_safe"      = "Q8_2" # Treatment with methadone is safe
-  #   ,"br_side_eff"  = "Q8_3" # Methadone has dangerous side effects
-  #   ,"br_not_recov" = "Q8_4" # People in methadone treatment are not actually in recovery
-  #   ,"br_bad_phys"  = "Q8_5" # Treatment with methadone is bad for you physically
-  #   ,"br_get_high"  = "Q8_6" # Most people in methadone treatment use it to get high
-  #   ,"br_cravings"  = "Q8_7" # Methadone helps prevent cravings for opioids
-  #   ,"br_from_high" = "Q8_8" # Methadone helps prevent individuals from getting high
-  #
-  #   ,"nt_replace"   = "Q9_1" # Treatment with methadone is replacing one addiction with another
-  #   ,"nt_safe"      = "Q9_2" # Treatment with methadone is safe
-  #   ,"nt_side_eff"  = "Q9_3" # Methadone has dangerous side effects
-  #   ,"nt_not_recov" = "Q9_4" # People in methadone treatment are not actually in recovery
-  #   ,"nt_bad_phys"  = "Q9_5" # Treatment with methadone is bad for you physically
-  #   ,"nt_get_high"  = "Q9_6" # Most people in methadone treatment use it to get high
-  #   ,"nt_cravings"  = "Q9_7" # Methadone helps prevent cravings for opioids
-  #   ,"nt_from_high" = "Q9_8" # Methadone helps prevent individuals from getting high
-  # )
-ds2 %>% glimpse()
+# ds2 <- ds1 %>%
+#   dplyr::select(
+#     c(
+#       "ResponseId", "Status", "Progress", "Finished"
+#       ,names(demographic)
+#       ,names(varname_scale)
+#     )
+#   )
 
 # ---- basic-table --------------------------------------------------------------
 
 
 # ---- basic-graph --------------------------------------------------------------
-# q5 v q15
-
-d <- ds1 %>%
-  dplyr::select
-  ggplot(x =)
 
 
-# ---- survey-response -------------------------
+# ---- survey-response  -------------------------
+cat("Initial responses, N = ", ds0 %>% n_distinct("ResponseId"))
+ds0 %>% group_by(Status) %>% count() %>% neat()
+ds0 <- ds0 %>% filter(Status == "IP Address")
+cat("After keeping only `IP Address`\n",
+    "Remaining responses, N =", ds0 %>% n_distinct("ResponseId"))
 
+
+ds0 %>% group_by(Finished) %>% count() %>% neat()
+ds0 <- ds0 %>% filter(Finished)
+cat("After keeping only those that finished the survey\n",
+    "Remaining responses, N =", ds0 %>% n_distinct("ResponseId"))
+
+ds0 %>% group_by(UserLanguage) %>% count() %>% neat()
+
+ds_meta %>% filter(q_name == "Q1") %>% pull(item_label)
+ds0 %>% group_by(Q1) %>% count() %>% neat()
+ds0 <- ds0 %>% filter(Q1 == "Yes")
+cat("After keeping only those older than 18 years of age\n",
+    "Remaining responses, N =", ds0 %>% n_distinct("ResponseId"))
+
+ds0 %>%
+  mutate(
+    date = lubridate::date(RecordedDate)
+  ) %>%
+  ggplot(aes(x = date) )+
+  geom_bar()+
+  labs(
+    title = "Date of response collection"
+    ,x = "2019"
+    ,y = "Number of responses"
+  )
+
+d <- ds0 %>%
+  # arrange(`Duration (in seconds)`) %>%
+  mutate(
+    minutes = `Duration (in seconds)`/60
+    ,hours = `Duration (in seconds)`/60 / 60
+    ,days = `Duration (in seconds)`/60 / 60 / 24
+  ) %>%
+  arrange(minutes) %>%
+  select(minutes, hours, days) %>%
+  dplyr::mutate(
+    id = row_number()
+  )
+d %>% filter(hours > 1) %>%
+  TabularManifest::histogram_continuous(
+    "hours"
+    ,bin_width = 1
+    ,main_title = paste0(
+      "Repondends who took more than 1 hour to complete the survey ( N = "
+      ,d %>% filter(hours  > 1 ) %>% count() %>% pull(n), " )"
+    )
+  )
+d %>% filter(hours < 1) %>%
+  TabularManifest::histogram_continuous(
+    "minutes"
+    ,main_title = paste0(
+      "Repondends who completed the survey within 1 hour or less ( N = "
+      ,d %>% filter(hours <= 1) %>% count() %>% pull(n), " )"
+    )
+  )
+
+ds0 <- ds0 %>% filter(`Duration (in seconds)` < 60*60 )
+cat("After keeping only those who completed the survey within 1 hour\n",
+    "Remaining responses, N =", ds0 %>% n_distinct("ResponseId"))
+
+
+
+stem(ds0$`Duration (in seconds)`)
 
 # ---- demographics -----------------------------------------
 cat("\n Sample size: ")
@@ -455,26 +434,26 @@ ds1 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "stud
 
 
 # ---- methadone ---------------------
-cat("\n\n# Item Analysis: Methadone")
-# for(item_i in varname_e_scale[1:3]){
-for(item_i in names(methadone) ){
-  # item_i <- "Q7_1"
-  item_label <- ds_meta %>%
-    dplyr::filter(item_name == item_i ) %>%
-    dplyr::pull(short_label)
-  item_description <- ds_meta %>%
-    dplyr::filter(item_name == item_i ) %>%
-    dplyr::pull(item)
-
-  cat("\n\n")
-  cat("## ", item_i," - ", item_label)
-  # labelled::var_label(ds[item_i])
-  cat("\n\n")
-  item_description %>% print()
-  cat("\n\n")
-  ds1 %>% describe_item(item_i) %>% print()
-  cat("\n\n")
-}
+# cat("\n\n# Item Analysis: Methadone")
+# # for(item_i in varname_e_scale[1:3]){
+# for(item_i in names(methadone) ){
+#   # item_i <- "Q7_1"
+#   item_label <- ds_meta %>%
+#     dplyr::filter(item_name == item_i ) %>%
+#     dplyr::pull(short_label)
+#   item_description <- ds_meta %>%
+#     dplyr::filter(item_name == item_i ) %>%
+#     dplyr::pull(item)
+#
+#   cat("\n\n")
+#   cat("## ", item_i," - ", item_label)
+#   # labelled::var_label(ds[item_i])
+#   cat("\n\n")
+#   item_description %>% print()
+#   cat("\n\n")
+#   ds1 %>% describe_item(item_i) %>% print()
+#   cat("\n\n")
+# }
 
 
 
