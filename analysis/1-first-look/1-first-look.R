@@ -24,45 +24,24 @@ describe_item <- function(d, varname){
   # d <- ds1
   # varname <- "Q2"
   variable_label <- ds_meta %>%
-    dplyr::filter(item_name == varname ) %>%
-    dplyr::pull(item)
+    dplyr::filter(q_name == varname ) %>%
+    dplyr::pull(item_label)
   g <- d %>%
     TabularManifest::histogram_discrete(varname)+
     labs(
       title = paste0(varname," : ", variable_label)
     )
   return(g)
-
-
-  # d1 <- d %>%
-  #   dplyr::rename(temp = varname ) %>%
-  #   dplyr::mutate(
-  #     temp = as.numeric(factor(temp)),
-  #     temp = ifelse(temp %in% c(1:5), temp, NA)
-  #   ) %>%
-  #   plyr::rename(c("temp" = varname))
-  #
-  # d1 %>% group_by(temp) %>% summarize(n = n())
-  #
-  # psych::summary.psych(d)
-  # d1 %>% histogram_continuous(varname)
-
-
-  # cat("\n")
-  # cat("\nMean: ",round(mean( as.numeric( factor(d[,varname]) ),na.rm = T),2),"\n")
-  # cat("\nSD: ", round(sd(as.numeric(d[,varname]), na.rm = T),2),"\n")
-  # cat("\nMissing: ",sum(is.na(d[,varname])),"\n")
-
 }
 
 make_corr_matrix <- function(d,metaData,item_names){
-  # d <- dsn
-  # metaData <- dto$metaData
-  # item_names <- varname_n_scale
+  # d <- ds_opioid
+  # metaData <- ds_meta
+  # item_names <- c(q4_varnames,"total_opioid")
   #
   # d %>% glimpse()
   # d <- ds %>% dplyr::select(foc_01:foc_49)
-  d1 <- d %>% dplyr::select_(.dots=item_names)
+  d1 <- d %>% dplyr::select(item_names)
   d2 <- d1[complete.cases(d1),] %>%
     dplyr::mutate(
       total_score = rowSums(.)
@@ -176,7 +155,7 @@ ds_meta <- dplyr::left_join(
 lvl_knowledge <- c(
    "Very knowledgeable"
   ,"Somewhat knowledgeable"
-  ,"I've never heard of this treatment"
+  ,"I have never heard of this treatment"
   ,"I choose not to answer"
 )
 # Q13, Q14
@@ -325,39 +304,42 @@ ds1 <- ds0 %>%
 
 
 # ---- survey-response  -------------------------
-cat("Initial responses, N = ", ds0 %>% n_distinct("ResponseId"))
-ds0 %>% group_by(Status) %>% count() %>% neat()
-ds0 <- ds0 %>% filter(Status == "IP Address")
+cat("Initial responses, N = ", ds1 %>% n_distinct("ResponseId"))
+ds1 %>% group_by(Status) %>% count() %>% neat()
+ds2 <- ds1 %>% filter(Status == "IP Address")
 cat("After keeping only `IP Address`\n",
-    "Remaining responses, N =", ds0 %>% n_distinct("ResponseId"))
+    "Remaining responses, N =", ds1 %>% n_distinct("ResponseId"))
 
 
-ds0 %>% group_by(Finished) %>% count() %>% neat()
-ds0 <- ds0 %>% filter(Finished)
+ds1 %>% group_by(Finished) %>% count() %>% neat()
+ds1 <- ds1 %>% filter(Finished)
 cat("After keeping only those that finished the survey\n",
-    "Remaining responses, N =", ds0 %>% n_distinct("ResponseId"))
+    "Remaining responses, N =", ds1 %>% n_distinct("ResponseId"))
 
-ds0 %>% group_by(UserLanguage) %>% count() %>% neat()
+ds1 %>% group_by(UserLanguage) %>% count() %>% neat()
 
 ds_meta %>% filter(q_name == "Q1") %>% pull(item_label)
-ds0 %>% group_by(Q1) %>% count() %>% neat()
-ds0 <- ds0 %>% filter(Q1 == "Yes")
+ds1 %>% group_by(Q1) %>% count() %>% neat()
+ds1 <- ds1 %>% filter(Q1 == "Yes")
 cat("After keeping only those older than 18 years of age\n",
-    "Remaining responses, N =", ds0 %>% n_distinct("ResponseId"))
+    "Remaining responses, N =", ds1 %>% n_distinct("ResponseId"))
 
-ds0 %>%
+ds1 %>%
   mutate(
     date = lubridate::date(RecordedDate)
   ) %>%
   ggplot(aes(x = date) )+
   geom_bar()+
   labs(
-    title = "Date of response collection"
+    title = paste0("Date of response collection (N ="
+                ,ds1 %>% n_distinct("ResponseId")
+                , ")"
+              )
     ,x = "2019"
     ,y = "Number of responses"
   )
 
-d <- ds0 %>%
+d <- ds1 %>%
   # arrange(`Duration (in seconds)`) %>%
   mutate(
     minutes = `Duration (in seconds)`/60
@@ -382,35 +364,35 @@ d %>% filter(hours < 1) %>%
   TabularManifest::histogram_continuous(
     "minutes"
     ,main_title = paste0(
-      "Repondends who completed the survey within 1 hour or less ( N = "
+      "Repondends who completed the survey within 1 hour ( N = "
       ,d %>% filter(hours <= 1) %>% count() %>% pull(n), " )"
     )
   )
 
-ds0 <- ds0 %>% filter(`Duration (in seconds)` < 60*60 )
+ds2 <- ds1 %>% filter(`Duration (in seconds)` < 60*60 )
 cat("After keeping only those who completed the survey within 1 hour\n",
-    "Remaining responses, N =", ds0 %>% n_distinct("ResponseId"))
+    "Remaining responses, N =", ds2 %>% n_distinct("ResponseId"))
 
-
-
-stem(ds0$`Duration (in seconds)`)
 
 # ---- demographics -----------------------------------------
-cat("\n Sample size: ")
-ds1$ResponseId %>% length() %>% unique()
 
-cat("\n\n")
-cat("## Sample characteristics\n")
+cat("\nThe following descriptives are based on N = ",
+    ds2 %>% n_distinct("ResponseId"), " observations.\n"
+    )
 
-ds1 %>% describe_item("Q2")  #  = "institution"
-ds1 %>% describe_item("Q16") # = "class_standing"
-ds1 %>% describe_item("Q17") # = "age"
+ds2 %>% describe_item("Q2")  #  = "institution"
+ds2 %>% describe_item("Q16") # = "class_standing"
+ds2 %>% describe_item("Q17") # = "age"
+ds2 %>% describe_item("Q19") # = "gender"
+ds2 %>% describe_item("Q20") # = "political"
+ds2 %>% describe_item("Q21") # = "religion"
+
 
 cat("\n",
-  "Q18: ", (ds_meta %>% filter(item_name == "Q18") %>% pull(item)), "\n"
+    "Q18: ", (ds_meta %>% filter(q_name == "Q18") %>% pull(item_label)), "\n"
 )
-ds1 %>% dplyr::group_by(Q18) %>% count() %>% arrange(desc(n)) %>% neat()
-ds1 %>% dplyr::group_by(Q18) %>% count() %>% arrange(desc(n)) %>%
+ds2 %>% dplyr::group_by(Q18) %>% count() %>% arrange(desc(n)) %>% neat()
+ds2 %>% dplyr::group_by(Q18) %>% count() %>% arrange(desc(n)) %>%
   dplyr::mutate(
     race = ifelse(n > 10, Q18, "Other")
   ) %>%
@@ -423,14 +405,97 @@ ds1 %>% dplyr::group_by(Q18) %>% count() %>% arrange(desc(n)) %>%
   ggplot(aes(x=reorder(race,n) ,y=n ) )+
   geom_col(fill = "salmon", alpha = .3, color = "black")+
   coord_flip()
-ds1 %>% describe_item("Q19") # = "gender"
-ds1 %>% describe_item("Q20") # = "political"
-ds1 %>% describe_item("Q21") # = "religion"
-ds1 %>% dplyr::group_by(Q22) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
+
 cat("\n",
-    "Q23: ", (ds_meta %>% filter(item_name == "Q23") %>% pull(item)), "\n"
+    "Q22: ", (ds_meta %>% filter(q_name == "Q22") %>% pull(item_label)), "\n"
 )
-ds1 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
+ds2 %>% dplyr::group_by(Q22) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
+cat("\n",
+    "Q23: ", (ds_meta %>% filter(q_name == "Q23") %>% pull(item_label)), "\n"
+)
+ds2 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
+
+# ---- opioid-use -------------------------
+rundown <- function(d, qn){
+  # d <- ds2
+  # qn = "Q4_1"
+  d %>% TabularManifest::histogram_discrete(
+    qn
+    ,main_title = paste0( ds_meta %>% filter(q_name == qn) %>% pull(section),"\n",
+      qn, " : ", ds_meta %>% filter(q_name == qn) %>% pull(item_label)
+    )
+  )
+}
+
+cat("\n SECTION Q4 \n"
+  , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
+)
+compute_total_opioid <- function(d, varnames){
+  # d <- ds2
+  # varnames <- grep("Q4_", names(ds2), value = T)
+  d
+}
+q4_varnames <- grep("Q4_", names(ds2), value = T)
+recode_opioid <- function(x){
+  car::recode(var = x, recodes =
+  "
+  ;'Very knowledgeable'                    = '2'
+  ;'Somewhat knowledgeable'                = '1'
+  ;'I have never heard of this treatment'  = '0'
+  ;'I choose not to answer'                = NA
+  "
+  )
+}
+compute_total_score <- function(d, id_name = "ResponseId", rec_guide){
+  # d <- ds_opioid
+  # id_name <- "ResponseId"
+  varname_scale <- setdiff(names(d),"ResponseId")
+  d_out <- d %>%
+    dplyr::mutate_at(varname_scale, recode_opioid) %>%
+    dplyr::mutate_at(varnamame_scale, as.integer) %>%
+    dplyr::mutate(
+      total_score = rowSums(.[varname_scale],na.rm = TRUE)
+    )
+  return(d_out)
+}
+ds_opioid <- ds2 %>%
+  select(c("ResponseId", q4_varnames) ) %>%
+  compute_total_score(rec_guide = recode_opioid)
+
+  mutate_at(q4_varnames, recode_opioid) %>%
+  mutate_at(q4_varnames, as.integer) %>%
+  compute_total_score()
+
+  dplyr::mutate(
+    total_opioid = rowSums(.[q4_varnames],na.rm = TRUE)
+  ) %>%
+  select(ResponseId, total_opioid) %>%
+  dplyr::right_join(
+    ds2 %>% select( c(ResponseId, q4_varnames) )
+  )
+
+
+ds_opioid
+
+ds_opioid %>% TabularManifest::histogram_continuous(
+  "total_opioid"
+  ,main_title = paste0("Total score `1` for `Somewhat`, `2` for `Very` Knowledgable")
+)
+
+cormat <- make_corr_matrix(ds2, dto$metaData, varname_n_scale)
+make_corr_plot(cormat, upper="pie")
+
+
+ds2 %>% rundown(qn = "Q4_1")
+ds2 %>% rundown(qn = "Q4_2")
+ds2 %>% rundown(qn = "Q4_3")
+ds2 %>% rundown(qn = "Q4_4")
+ds2 %>% rundown(qn = "Q4_5")
+ds2 %>% rundown(qn = "Q4_6")
+ds2 %>% rundown(qn = "Q4_7")
+ds2 %>% rundown(qn = "Q4_8")
+ds2 %>% rundown(qn = "Q4_9")
+
 
 
 # ---- methadone ---------------------
@@ -454,6 +519,7 @@ ds1 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "stud
 #   ds1 %>% describe_item(item_i) %>% print()
 #   cat("\n\n")
 # }
+
 
 
 
