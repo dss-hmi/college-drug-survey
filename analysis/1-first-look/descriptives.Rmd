@@ -2,9 +2,11 @@
 title: "Demographic & Substance Use"
 output:
   html_document:
+    toc: true
+    toc_depth: 3
     keep_md: no
-    toc: yes
     toc_float: true
+    code_folding: hide
   word_document:
     keep_md: no
     toc: no
@@ -40,51 +42,61 @@ opts_chunk$set(
   # dev = "pdf"#,
   # dev.args=list(pdf = list(colormodel = 'cmyk'))
 )
-echoChunks <- FALSE
+echoChunks <- TRUE
 options(width=120) #So the output is 50% wider than the default.
 # connect to the file with the underlying R script  
 read_chunk("./analysis/1-first-look/1-first-look.R") 
 ```
 
-<!-- Load 'sourced' R files.  Suppress the output when loading packages. --> 
+## Environment 
+This section offers technical detail on the environment and data preparation. Non-technical readers should feel free to skip. 
 ```{r load-packages, echo=echoChunks, message=FALSE}
 ```
 
-<!-- Load the sources.  Suppress the output when loading sources. --> 
 ```{r load-sources, echo=echoChunks, message=FALSE}
 ```
 
-<!-- Load any Global functions and variables declared in the R file.  Suppress the output. --> 
 ```{r declare-globals, echo=echoChunks, results='show', message=FALSE}
 ```
 
-<!-- Declare any global functions specific to a Rmd output.Suppress the output. --> 
-```{r echo=echoChunks,echo=echoChunks, message=FALSE}
-#Put code in here.  It doesn't call a chunk in the codebehind file.
-```
-
-<!-- Load the datasets.   -->
 ```{r load-data, echo=echoChunks, results='hide', message=FALSE}
 ```
 
-<!-- Inspect the datasets.   -->
 ```{r inspect-data, echo=echoChunks, results='show', message=FALSE}
 ```
 
-<!-- Tweak the datasets.   -->
 ```{r tweak-data, echo=echoChunks, results='show', message=FALSE}
 ```
 
+```{r add-new-names, echo=echoChunks, results='show', message=FALSE}
+```
+
+```{r tweak-data-1, echo=echoChunks, results='show', message=FALSE}
+```
+
+# Survey Response
+This section demonstrates the attrition of survey responses due to data quality
+```{r survey-response, echo=TRUE, results='show', message=FALSE, warning=FALSE}
+```
+
 # Demographics
-```{r demographics, echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+```{r demographics, echo=FALSE, results='show', message=FALSE, warning=FALSE, cache = T}
 ```
 
-# Substance Use
-```{r substance-use, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE}
+# (Q4) Knowledge of Opioid Use
+```{r opioid-use, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+# Methodone
+```{r methodone, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE}
+```
 
-```{r q40, echo=FALSE, fig.width=13, message=FALSE, out.width="900px", results='asis', warning=FALSE}
+# Buprenorphine
+```{r buprenorphine, echo=FALSE, fig.width=13, message=FALSE, out.width="900px", results='asis', warning=FALSE}
+```
+
+# Naltrexone
+```{r naltrexone, echo=FALSE, fig.width=13, message=FALSE, out.width="900px", results='asis', warning=FALSE}
 ```
 
 
