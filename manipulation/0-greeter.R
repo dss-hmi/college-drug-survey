@@ -44,7 +44,12 @@ ds_names <- d_names %>% t %>% tibble::as_tibble() %>%
 names(ds0) <- ds_names %>% dplyr::pull(q_name)
 
 
+
+
 # ---- tweak-data ---------------------
+replace_ihave <- function(x){gsub("I've","I have", x)}
+ds0 <- ds0 %>%
+  dplyr::mutate_all(replace_ihave)
 
 #
 # recode_guide <-
