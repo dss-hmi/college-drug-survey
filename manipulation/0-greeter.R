@@ -48,8 +48,10 @@ names(ds0) <- ds_names %>% dplyr::pull(q_name)
 
 # ---- tweak-data ---------------------
 replace_ihave <- function(x){gsub("I've","I have", x)}
+replace_donot <- function(x){gsub("don't","do not", x)}
 ds0 <- ds0 %>%
-  dplyr::mutate_all(replace_ihave)
+  dplyr::mutate_all(replace_ihave) %>%
+  dplyr::mutate_all(replace_donot)
 
 #
 # recode_guide <-
