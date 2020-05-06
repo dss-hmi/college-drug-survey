@@ -207,7 +207,7 @@ lvl_support <- c(
   ,"Strongly oppose"
   ,"Unsure"
   ,"I choose not to answer"
-  ,"I don't know what this policy is/means"
+  ,"I do not know what this policy is/means"
 )
 #Q16
 lvl_class_standing <- c(
@@ -477,6 +477,7 @@ ds_opioid %>% TabularManifest::histogram_continuous(
 
 # ---- opioid-use-2 -----------
 cormat <- make_corr_matrix(ds_opioid, ds_meta, q4_varnames)
+cat("\n Number of complete cases = ", nrow(ds_opioid))
 make_corr_plot(cormat, upper="pie")
 
 # ---- opioid-use-3 -----------
@@ -527,6 +528,7 @@ ds_methodone %>% TabularManifest::histogram_continuous(
 
 # ---- methodone-2 -----------
 cormat <- make_corr_matrix(ds_methodone, ds_meta, q7_varnames)
+cat("\n Number of complete cases = ", nrow(ds_methodone))
 make_corr_plot(cormat, upper="pie")
 
 # ---- methodone-3 -----------
@@ -564,6 +566,7 @@ ds_buprenorphine %>% TabularManifest::histogram_continuous(
 
 # ---- buprenorphine-2 -----------
 cormat <- make_corr_matrix(ds_buprenorphine, ds_meta, q8_varnames)
+cat("\n Number of complete cases = ", nrow(ds_buprenorphine))
 make_corr_plot(cormat, upper="pie")
 
 # ---- buprenorphine-3 -----------
@@ -601,6 +604,7 @@ ds_naltrexone %>% TabularManifest::histogram_continuous(
 
 # ---- naltrexone-2 -----------
 cormat <- make_corr_matrix(ds_naltrexone, ds_meta, q9_varnames)
+cat("\n Number of complete cases = ", nrow(ds_naltrexone))
 make_corr_plot(cormat, upper="pie")
 
 # ---- naltrexone-3 -----------
@@ -616,6 +620,58 @@ for(i in q9_varnames){
   cat("\n")
 }
 
+
+# ---- policy-prep ----------------
+
+q15_varnames <- grep("Q15_", names(ds2), value = T)
+# ds2 %>% group_by(Q15_1) %>% count()
+recode_support <- function(x){
+  car::recode(var = x, recodes =
+                "
+  ;'Strongly support'          = 2
+  ;'Somewhat support'          = 1
+  ;'Neutral/no opinion'                 = 0
+  ;'Somewhat oppose'       = -1
+  ;'Strongly oppose'       = -2
+  ;'Unsure'                  = NA
+  ;'I choose not to answer'  = NA
+  ;'I do not know what this policy is/means'  = NA
+  "
+  )
+}
+
+ds_support <- ds2 %>%
+  select(c("ResponseId", q15_varnames) ) %>%
+  compute_total_score(rec_guide = recode_support)
+
+# ---- policy-1 -------------
+cat("\n SECTION Q15 \n"
+    , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
+)
+
+ds_support %>% TabularManifest::histogram_continuous(
+  "total_score"
+  ,main_title = paste0("Total score, max = 14 \n (+2)Strongly Support, (+1)Support, (0)Neutral, (-1)Oppose, (-2)Strongly Oppose")
+  ,bin_width = 1
+)
+
+# ---- policy-2 -----------
+cormat <- make_corr_matrix(ds_support, ds_meta, q15_varnames)
+cat("\n Number of complete cases = ", nrow(ds_support))
+make_corr_plot(cormat, upper="pie")
+
+# ---- policy-3 -----------
+cat("\n Prompt: \n"
+    , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
+    ,"\n"
+)
+for(i in q15_varnames){
+  cat("\n## ", i,
+      ds_meta %>% filter(q_name == i) %>% pull(q_label),
+      "\n")
+  ds2 %>% rundown(qn = i) %>% print()
+  cat("\n")
+}
 
 
 
