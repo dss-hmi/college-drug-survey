@@ -39,6 +39,7 @@ make_corr_matrix <- function(d,metaData,item_names){
   # metaData <- ds_meta
   # item_names <- c(q4_varnames,"total_opioid")
   #
+  # browser()
   # d %>% glimpse()
   # d <- ds %>% dplyr::select(foc_01:foc_49)
   d1 <- d %>% dplyr::select(item_names)
@@ -48,8 +49,8 @@ make_corr_matrix <- function(d,metaData,item_names){
     )
   # d2 %>% glimpse()
   rownames <- metaData %>%
-    dplyr::filter(item_name %in% item_names) %>%
-    dplyr::mutate(display_name = paste0(item_name,"\n",item_label))
+    dplyr::filter(q_name %in% item_names) %>%
+    dplyr::mutate(display_name = paste0(q_name,"\n",q_label))
 
   rownames <- rownames[,"display_name"]
   rownames[nrow(rownames)+1,1]<- "total\nscore"
@@ -87,7 +88,7 @@ make_corr_plot <- function (
 # the production of the dto object is now complete
 # we verify its structure and content:
 ds0 <- readr::read_csv(config$oud_survey)
-ds_meta <- readr::read_csv(config$survey_items)
+ds_meta <- readr::read_csv(config$survey_meta)
 
 # ---- inspect-data -------------------------------------------------------------
 
@@ -308,7 +309,7 @@ cat("Initial responses, N = ", ds1 %>% n_distinct("ResponseId"))
 ds1 %>% group_by(Status) %>% count() %>% neat()
 ds2 <- ds1 %>% filter(Status == "IP Address")
 cat("After keeping only `IP Address`\n",
-    "Remaining responses, N =", ds1 %>% n_distinct("ResponseId"))
+    "Remaining responses, N =", ds2 %>% n_distinct("ResponseId"))
 
 
 ds1 %>% group_by(Finished) %>% count() %>% neat()
@@ -415,7 +416,7 @@ cat("\n",
 )
 ds2 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
 
-# ---- opioid-use -------------------------
+# ---- opioid-use-prep -------------------------
 rundown <- function(d, qn){
   # d <- ds2
   # qn = "Q4_1"
@@ -427,21 +428,14 @@ rundown <- function(d, qn){
   )
 }
 
-cat("\n SECTION Q4 \n"
-  , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
-)
-compute_total_opioid <- function(d, varnames){
-  # d <- ds2
-  # varnames <- grep("Q4_", names(ds2), value = T)
-  d
-}
 q4_varnames <- grep("Q4_", names(ds2), value = T)
+
 recode_opioid <- function(x){
   car::recode(var = x, recodes =
   "
-  ;'Very knowledgeable'                    = '2'
-  ;'Somewhat knowledgeable'                = '1'
-  ;'I have never heard of this treatment'  = '0'
+  ;'Very knowledgeable'                    = 2
+  ;'Somewhat knowledgeable'                = 1
+  ;'I have never heard of this treatment'  = 0
   ;'I choose not to answer'                = NA
   "
   )
@@ -451,74 +445,176 @@ compute_total_score <- function(d, id_name = "ResponseId", rec_guide){
   # id_name <- "ResponseId"
   varname_scale <- setdiff(names(d),"ResponseId")
   d_out <- d %>%
-    dplyr::mutate_at(varname_scale, recode_opioid) %>%
-    dplyr::mutate_at(varnamame_scale, as.integer) %>%
+    dplyr::mutate_at(varname_scale, rec_guide) %>%
+    dplyr::mutate_at(varname_scale, as.character) %>%
+    dplyr::mutate_at(varname_scale, as.integer) %>%
     dplyr::mutate(
-      total_score = rowSums(.[varname_scale],na.rm = TRUE)
-    )
+      allna   = rowSums(is.na(.[varname_scale]))== length(varname_scale)
+      ,anyna  = rowSums(is.na(.[varname_scale])) > 0L
+      ,total_score = rowSums(.[varname_scale],na.rm = TRUE)
+      ,total_score = ifelse(allna,NA,total_score)
+    ) %>%
+    dplyr::filter(!anyna) %>%
+    dplyr::select(-allna,-anyna)
   return(d_out)
 }
+
 ds_opioid <- ds2 %>%
   select(c("ResponseId", q4_varnames) ) %>%
   compute_total_score(rec_guide = recode_opioid)
+# ds_opioid %>% arrange(total_score)
 
-  mutate_at(q4_varnames, recode_opioid) %>%
-  mutate_at(q4_varnames, as.integer) %>%
-  compute_total_score()
-
-  dplyr::mutate(
-    total_opioid = rowSums(.[q4_varnames],na.rm = TRUE)
-  ) %>%
-  select(ResponseId, total_opioid) %>%
-  dplyr::right_join(
-    ds2 %>% select( c(ResponseId, q4_varnames) )
-  )
-
-
-ds_opioid
-
-ds_opioid %>% TabularManifest::histogram_continuous(
-  "total_opioid"
-  ,main_title = paste0("Total score `1` for `Somewhat`, `2` for `Very` Knowledgable")
+# ---- opioid-use-1 -------------
+cat("\n SECTION Q4 \n"
+    , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
 )
 
-cormat <- make_corr_matrix(ds2, dto$metaData, varname_n_scale)
+ds_opioid %>% TabularManifest::histogram_continuous(
+  "total_score"
+  ,main_title = paste0("Total score: 1 - Somewhat, 2 - Very Knowledgable (Max = 18)")
+  ,bin_width = 1
+)
+
+# ---- opioid-use-2 -----------
+cormat <- make_corr_matrix(ds_opioid, ds_meta, q4_varnames)
 make_corr_plot(cormat, upper="pie")
 
+# ---- opioid-use-3 -----------
+cat("\n Prompt: \n"
+    , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
+    ,"\n"
+)
+for(i in q4_varnames){
+  cat("\n## ", i,
+      ds_meta %>% filter(q_name == i) %>% pull(q_label),
+      "\n")
+  ds2 %>% rundown(qn = i) %>% print()
+  cat("\n")
+}
 
-ds2 %>% rundown(qn = "Q4_1")
-ds2 %>% rundown(qn = "Q4_2")
-ds2 %>% rundown(qn = "Q4_3")
-ds2 %>% rundown(qn = "Q4_4")
-ds2 %>% rundown(qn = "Q4_5")
-ds2 %>% rundown(qn = "Q4_6")
-ds2 %>% rundown(qn = "Q4_7")
-ds2 %>% rundown(qn = "Q4_8")
-ds2 %>% rundown(qn = "Q4_9")
+# ---- methodone-prep ----------------
 
+q7_varnames <- grep("Q7_", names(ds2), value = T)
 
+recode_agreement <- function(x){
+  car::recode(var = x, recodes =
+  "
+  ;'Strongly agree'          = 2
+  ;'Somewhat agree'          = 1
+  ;'Neutral'                 = 0
+  ;'Somewhat disagree'       = -1
+  ;'Strongly disagree'       = -2
+  ;'Unsure'                  = NA
+  ;'I choose not to answer'  = NA
+  "
+  )
+}
 
-# ---- methadone ---------------------
-# cat("\n\n# Item Analysis: Methadone")
-# # for(item_i in varname_e_scale[1:3]){
-# for(item_i in names(methadone) ){
-#   # item_i <- "Q7_1"
-#   item_label <- ds_meta %>%
-#     dplyr::filter(item_name == item_i ) %>%
-#     dplyr::pull(short_label)
-#   item_description <- ds_meta %>%
-#     dplyr::filter(item_name == item_i ) %>%
-#     dplyr::pull(item)
-#
-#   cat("\n\n")
-#   cat("## ", item_i," - ", item_label)
-#   # labelled::var_label(ds[item_i])
-#   cat("\n\n")
-#   item_description %>% print()
-#   cat("\n\n")
-#   ds1 %>% describe_item(item_i) %>% print()
-#   cat("\n\n")
-# }
+ds_methodone <- ds2 %>%
+  select(c("ResponseId", q7_varnames) ) %>%
+  compute_total_score(rec_guide = recode_agreement)
+
+# ---- methodone-1 -------------
+cat("\n SECTION Q7 \n"
+    , ds_meta %>% filter(q_name == "Q7_1") %>% pull(section)
+)
+
+ds_methodone %>% TabularManifest::histogram_continuous(
+  "total_score"
+  ,main_title = paste0("Total score, max = 18 \n (+2)Strongly Agree, (+1)Agree, (0)Neutral, (-1)Disagree, (-2)Strongly Disagree")
+  ,bin_width = 1
+)
+
+# ---- methodone-2 -----------
+cormat <- make_corr_matrix(ds_methodone, ds_meta, q7_varnames)
+make_corr_plot(cormat, upper="pie")
+
+# ---- methodone-3 -----------
+cat("\n Prompt: \n"
+    , ds_meta %>% filter(q_name == "Q7_1") %>% pull(section)
+    ,"\n"
+)
+for(i in q7_varnames){
+  cat("\n## ", i,
+      ds_meta %>% filter(q_name == i) %>% pull(q_label),
+      "\n")
+  ds2 %>% rundown(qn = i) %>% print()
+  cat("\n")
+}
+
+# ---- buprenorphine-prep ----------------
+
+q8_varnames <- grep("Q8_", names(ds2), value = T)
+# ds2 %>% group_by(Q8_1) %>% count()
+
+ds_buprenorphine <- ds2 %>%
+  select(c("ResponseId", q8_varnames) ) %>%
+  compute_total_score(rec_guide = recode_agreement)
+
+# ---- buprenorphine-1 -------------
+cat("\n SECTION Q8 \n"
+    , ds_meta %>% filter(q_name == "Q8_1") %>% pull(section)
+)
+
+ds_buprenorphine %>% TabularManifest::histogram_continuous(
+  "total_score"
+  ,main_title = paste0("Total score, max = 18 \n (+2)Strongly Agree, (+1)Agree, (0)Neutral, (-1)Disagree, (-2)Strongly Disagree")
+  ,bin_width = 1
+)
+
+# ---- buprenorphine-2 -----------
+cormat <- make_corr_matrix(ds_buprenorphine, ds_meta, q8_varnames)
+make_corr_plot(cormat, upper="pie")
+
+# ---- buprenorphine-3 -----------
+cat("\n Prompt: \n"
+    , ds_meta %>% filter(q_name == "Q8_1") %>% pull(section)
+    ,"\n"
+)
+for(i in q8_varnames){
+  cat("\n## ", i,
+      ds_meta %>% filter(q_name == i) %>% pull(q_label),
+      "\n")
+  ds2 %>% rundown(qn = i) %>% print()
+  cat("\n")
+}
+
+# ---- naltrexone-prep ----------------
+
+q9_varnames <- grep("Q9_", names(ds2), value = T)
+# ds2 %>% group_by(Q9_1) %>% count()
+
+ds_naltrexone <- ds2 %>%
+  select(c("ResponseId", q9_varnames) ) %>%
+  compute_total_score(rec_guide = recode_agreement)
+
+# ---- naltrexone-1 -------------
+cat("\n SECTION Q9 \n"
+    , ds_meta %>% filter(q_name == "Q9_1") %>% pull(section)
+)
+
+ds_naltrexone %>% TabularManifest::histogram_continuous(
+  "total_score"
+  ,main_title = paste0("Total score, max = 18 \n (+2)Strongly Agree, (+1)Agree, (0)Neutral, (-1)Disagree, (-2)Strongly Disagree")
+  ,bin_width = 1
+)
+
+# ---- naltrexone-2 -----------
+cormat <- make_corr_matrix(ds_naltrexone, ds_meta, q9_varnames)
+make_corr_plot(cormat, upper="pie")
+
+# ---- naltrexone-3 -----------
+cat("\n Prompt: \n"
+    , ds_meta %>% filter(q_name == "Q9_1") %>% pull(section)
+    ,"\n"
+)
+for(i in q9_varnames){
+  cat("\n## ", i,
+      ds_meta %>% filter(q_name == i) %>% pull(q_label),
+      "\n")
+  ds2 %>% rundown(qn = i) %>% print()
+  cat("\n")
+}
 
 
 
