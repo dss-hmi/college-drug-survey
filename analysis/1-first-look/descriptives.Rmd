@@ -122,7 +122,7 @@ This section demonstrates the attrition of survey responses due to data quality
 ```{r buprenorphine-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-# Naltrexone
+# (Q9) Naltrexone
 ```{r naltrexone-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
