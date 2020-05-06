@@ -1,4 +1,5 @@
 default:
     # To be processed by Ellis lanes
     survey_items:       "./data-public/metadata/survey_items.csv"
+    survey_meta:        "./data-public/metadata/survey_meta.csv"
     oud_survey:         "./data-unshared/derived/oud_survey.csv"
