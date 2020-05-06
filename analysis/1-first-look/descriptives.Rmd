@@ -135,6 +135,19 @@ This section demonstrates the attrition of survey responses due to data quality
 ```{r naltrexone-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+# (Q15) Policy Support
+```{r policy-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+```{r policy-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+```{r policy-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
+```
+
+```{r policy-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
 
 
 
