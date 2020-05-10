@@ -443,6 +443,53 @@ cat("\n",
 ds2 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
 
 
+# ---- opioid-use-prep -------------------------
+q4_varnames <- grep("Q4_", names(ds2), value = T)
+recode_opioid <- function(x){
+  car::recode(var = x, recodes =
+  "
+  ;'Very knowledgeable'                    = 2
+  ;'Somewhat knowledgeable'                = 1
+  ;'I have never heard of this treatment'  = 0
+  ;'I choose not to answer'                = NA
+  "
+  )
+}
+ds_opioid <- ds2 %>%
+  select(c("ResponseId", q4_varnames) ) %>%
+  compute_total_score(rec_guide = recode_opioid)
+# ds_opioid %>% arrange(total_score)
+
+# ---- opioid-use-1 -------------
+cat("\n SECTION Q4 \n"
+    , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
+)
+
+ds_opioid %>% TabularManifest::histogram_continuous(
+  "total_score"
+  ,main_title = paste0("Total score: 1 - Somewhat, 2 - Very Knowledgable (Max = 18)")
+  ,bin_width = 1
+)
+
+# ---- opioid-use-2 -----------
+cormat <- make_corr_matrix(ds_opioid, ds_meta, q4_varnames)
+cat("\n Number of complete cases = ", nrow(ds_opioid))
+make_corr_plot(cormat, upper="pie")
+
+# ---- opioid-use-3 -----------
+cat("\n Prompt: \n"
+    , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
+    ,"\n"
+)
+for(i in q4_varnames){
+  cat("\n## ", i,
+      ds_meta %>% filter(q_name == i) %>% pull(q_label),
+      "\n")
+  ds2 %>% rundown(qn = i) %>% print()
+  cat("\n")
+}
+
+
 # ---- tx-helpful-prep ----------------
 ds2 %>% group_by(Q6_1) %>% count()
 
@@ -450,7 +497,7 @@ q6_varnames <- grep("Q6_", names(ds2), value = T)
 # ds2 %>% group_by(Q15_1) %>% count()
 recode_helpfu <- function(x){
   car::recode(var = x, recodes =
-  "
+                "
   ;'Very helpful'            = 2
   ;'Somewhat helpful'        = 1
   ;'Neutral'                 = 0
@@ -498,55 +545,6 @@ for(i in q6_varnames){
 
 
 
-
-
-
-
-# ---- opioid-use-prep -------------------------
-q4_varnames <- grep("Q4_", names(ds2), value = T)
-recode_opioid <- function(x){
-  car::recode(var = x, recodes =
-  "
-  ;'Very knowledgeable'                    = 2
-  ;'Somewhat knowledgeable'                = 1
-  ;'I have never heard of this treatment'  = 0
-  ;'I choose not to answer'                = NA
-  "
-  )
-}
-ds_opioid <- ds2 %>%
-  select(c("ResponseId", q4_varnames) ) %>%
-  compute_total_score(rec_guide = recode_opioid)
-# ds_opioid %>% arrange(total_score)
-
-# ---- opioid-use-1 -------------
-cat("\n SECTION Q4 \n"
-    , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
-)
-
-ds_opioid %>% TabularManifest::histogram_continuous(
-  "total_score"
-  ,main_title = paste0("Total score: 1 - Somewhat, 2 - Very Knowledgable (Max = 18)")
-  ,bin_width = 1
-)
-
-# ---- opioid-use-2 -----------
-cormat <- make_corr_matrix(ds_opioid, ds_meta, q4_varnames)
-cat("\n Number of complete cases = ", nrow(ds_opioid))
-make_corr_plot(cormat, upper="pie")
-
-# ---- opioid-use-3 -----------
-cat("\n Prompt: \n"
-    , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
-    ,"\n"
-)
-for(i in q4_varnames){
-  cat("\n## ", i,
-      ds_meta %>% filter(q_name == i) %>% pull(q_label),
-      "\n")
-  ds2 %>% rundown(qn = i) %>% print()
-  cat("\n")
-}
 
 # ---- methodone-prep ----------------
 q7_varnames <- grep("Q7_", names(ds2), value = T)
@@ -598,6 +596,7 @@ for(i in q7_varnames){
   cat("\n")
 }
 
+
 # ---- buprenorphine-prep ----------------
 
 q8_varnames <- grep("Q8_", names(ds2), value = T)
@@ -636,6 +635,7 @@ for(i in q8_varnames){
   cat("\n")
 }
 
+
 # ---- naltrexone-prep ----------------
 
 q9_varnames <- grep("Q9_", names(ds2), value = T)
@@ -673,6 +673,7 @@ for(i in q9_varnames){
   ds2 %>% rundown(qn = i) %>% print()
   cat("\n")
 }
+
 
 
 # ---- policy-prep ----------------
