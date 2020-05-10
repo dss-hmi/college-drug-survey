@@ -84,6 +84,37 @@ make_corr_plot <- function (
     symbols(1:n, n:1, add=TRUE, bg=bg, fg=addgrid.col,  inches=FALSE, squares=rep(1, n))
   }
 }
+
+rundown <- function(d, qn){
+  # d <- ds2
+  # qn = "Q4_1"
+  d %>% TabularManifest::histogram_discrete(
+    qn
+    ,main_title = paste0( ds_meta %>% filter(q_name == qn) %>% pull(section),"\n",
+                          qn, " : ", ds_meta %>% filter(q_name == qn) %>% pull(item_label)
+    )
+  )
+}
+
+# must provide a  recode guide to  put reseponses on a numeric scale
+compute_total_score <- function(d, id_name = "ResponseId", rec_guide){
+  # d <- ds_opioid
+  # id_name <- "ResponseId"
+  varname_scale <- setdiff(names(d),"ResponseId")
+  d_out <- d %>%
+    dplyr::mutate_at(varname_scale, rec_guide) %>%
+    dplyr::mutate_at(varname_scale, as.character) %>%
+    dplyr::mutate_at(varname_scale, as.integer) %>%
+    dplyr::mutate(
+      allna   = rowSums(is.na(.[varname_scale]))== length(varname_scale)
+      ,anyna  = rowSums(is.na(.[varname_scale])) > 0L
+      ,total_score = rowSums(.[varname_scale],na.rm = TRUE)
+      ,total_score = ifelse(allna,NA,total_score)
+    ) %>%
+    dplyr::filter(!anyna) %>%
+    dplyr::select(-allna,-anyna)
+  return(d_out)
+}
 # ---- load-data ---------------------------------------------------------------
 # the production of the dto object is now complete
 # we verify its structure and content:
@@ -298,11 +329,6 @@ ds1 <- ds0 %>%
 #     )
 #   )
 
-# ---- basic-table --------------------------------------------------------------
-
-
-# ---- basic-graph --------------------------------------------------------------
-
 
 # ---- survey-response  -------------------------
 cat("Initial responses, N = ", ds1 %>% n_distinct("ResponseId"))
@@ -416,20 +442,67 @@ cat("\n",
 )
 ds2 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
 
-# ---- opioid-use-prep -------------------------
-rundown <- function(d, qn){
-  # d <- ds2
-  # qn = "Q4_1"
-  d %>% TabularManifest::histogram_discrete(
-    qn
-    ,main_title = paste0( ds_meta %>% filter(q_name == qn) %>% pull(section),"\n",
-      qn, " : ", ds_meta %>% filter(q_name == qn) %>% pull(item_label)
-    )
+
+# ---- tx-helpful-prep ----------------
+ds2 %>% group_by(Q6_1) %>% count()
+
+q6_varnames <- grep("Q6_", names(ds2), value = T)
+# ds2 %>% group_by(Q15_1) %>% count()
+recode_helpfu <- function(x){
+  car::recode(var = x, recodes =
+  "
+  ;'Very helpful'            = 2
+  ;'Somewhat helpful'        = 1
+  ;'Neutral'                 = 0
+  ;'Not very helpful'        = -1
+  ;'Not helpful at all'      = -2
+  ;'Unsure'                  = NA
+  ;'I choose not to answer'  = NA
+  "
   )
 }
 
-q4_varnames <- grep("Q4_", names(ds2), value = T)
+ds_support <- ds2 %>%
+  select(c("ResponseId", q6_varnames) ) %>%
+  compute_total_score(rec_guide = recode_helpfu)
 
+# ---- tx-helpful-1 -------------
+cat("\n SECTION Q15 \n"
+    , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
+)
+
+ds_support %>% TabularManifest::histogram_continuous(
+  "total_score"
+  ,main_title = paste0("Total score, max = 14 \n (+2)Strongly Support, (+1)Support, (0)Neutral, (-1)Oppose, (-2)Strongly Oppose")
+  ,bin_width = 1
+)
+
+# ---- tx-helpful-2 -----------
+cormat <- make_corr_matrix(ds_support, ds_meta, q15_varnames)
+cat("\n Number of complete cases = ", nrow(ds_support))
+make_corr_plot(cormat, upper="pie")
+
+# ---- tx-helpful-3 -----------
+cat("\n Prompt: \n"
+    , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
+    ,"\n"
+)
+for(i in q15_varnames){
+  cat("\n## ", i,
+      ds_meta %>% filter(q_name == i) %>% pull(q_label),
+      "\n")
+  ds2 %>% rundown(qn = i) %>% print()
+  cat("\n")
+}
+
+
+
+
+
+
+
+# ---- opioid-use-prep -------------------------
+q4_varnames <- grep("Q4_", names(ds2), value = T)
 recode_opioid <- function(x){
   car::recode(var = x, recodes =
   "
@@ -440,25 +513,6 @@ recode_opioid <- function(x){
   "
   )
 }
-compute_total_score <- function(d, id_name = "ResponseId", rec_guide){
-  # d <- ds_opioid
-  # id_name <- "ResponseId"
-  varname_scale <- setdiff(names(d),"ResponseId")
-  d_out <- d %>%
-    dplyr::mutate_at(varname_scale, rec_guide) %>%
-    dplyr::mutate_at(varname_scale, as.character) %>%
-    dplyr::mutate_at(varname_scale, as.integer) %>%
-    dplyr::mutate(
-      allna   = rowSums(is.na(.[varname_scale]))== length(varname_scale)
-      ,anyna  = rowSums(is.na(.[varname_scale])) > 0L
-      ,total_score = rowSums(.[varname_scale],na.rm = TRUE)
-      ,total_score = ifelse(allna,NA,total_score)
-    ) %>%
-    dplyr::filter(!anyna) %>%
-    dplyr::select(-allna,-anyna)
-  return(d_out)
-}
-
 ds_opioid <- ds2 %>%
   select(c("ResponseId", q4_varnames) ) %>%
   compute_total_score(rec_guide = recode_opioid)
@@ -494,7 +548,6 @@ for(i in q4_varnames){
 }
 
 # ---- methodone-prep ----------------
-
 q7_varnames <- grep("Q7_", names(ds2), value = T)
 
 recode_agreement <- function(x){
@@ -628,13 +681,13 @@ q15_varnames <- grep("Q15_", names(ds2), value = T)
 recode_support <- function(x){
   car::recode(var = x, recodes =
                 "
-  ;'Strongly support'          = 2
-  ;'Somewhat support'          = 1
-  ;'Neutral/no opinion'                 = 0
+  ;'Strongly support'      = 2
+  ;'Somewhat support'      = 1
+  ;'Neutral/no opinion'    = 0
   ;'Somewhat oppose'       = -1
   ;'Strongly oppose'       = -2
-  ;'Unsure'                  = NA
-  ;'I choose not to answer'  = NA
+  ;'Unsure'                                   = NA
+  ;'I choose not to answer'                   = NA
   ;'I do not know what this policy is/means'  = NA
   "
   )
@@ -672,6 +725,8 @@ for(i in q15_varnames){
   ds2 %>% rundown(qn = i) %>% print()
   cat("\n")
 }
+
+
 
 
 
