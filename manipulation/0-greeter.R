@@ -20,6 +20,7 @@ cat("\f") # clear console when working in RStudio
 # ---- load-packages -------------------------------------------------
 # Attach these packages so their functions don't need to be qualified: http://r-pkgs.had.co.nz/namespace.html#search-path
 library(magrittr) #Pipes
+library(dplyr)
 
 path_file <- "data-unshared/raw/College Student Survey regarding Opioid Use Disorder Treatment_May 6, 2019_10.04.csv"
 # ---- declare-globals -----------------------------------------------
@@ -44,8 +45,6 @@ ds_names <- d_names %>% t %>% tibble::as_tibble() %>%
 names(ds0) <- ds_names %>% dplyr::pull(q_name)
 
 
-
-
 # ---- tweak-data ---------------------
 replace_ihave <- function(x){gsub("I've","I have", x)}
 replace_donot <- function(x){gsub("don't","do not", x)}
@@ -53,21 +52,6 @@ ds0 <- ds0 %>%
   dplyr::mutate_all(replace_ihave) %>%
   dplyr::mutate_all(replace_donot)
 
-#
-# recode_guide <-
-#   "
-# 'Strongly agree'          = '2'
-# ;'Somewhat agree'         = '1'
-# ;'Neutral'                = '0'
-# ;'Somewhat disagree'      = '1'
-# ;'Strongly disagree'      = '2'
-# ;'Unsure'                 = '99'
-# ;'I choose not to answer' = '98'
-# "
-# recode_levels <- function(v){car::recode(v,recode_guide)}
-# ds2 <- ds2 %>%
-#   dplyr::mutate_all(recode_levels)
-#
 
 
 
