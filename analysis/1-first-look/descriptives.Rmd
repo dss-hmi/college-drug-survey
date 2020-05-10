@@ -84,81 +84,102 @@ This section demonstrates the attrition of survey responses due to data quality
 ```
 
 # (Q4) Knowledge of Opioid Use
-```{r opioid-use-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q4-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r opioid-use-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q4-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r opioid-use-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
+```{r q4-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
-```{r opioid-use-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q4-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
 # (Q6) Belief in Tx Helpfulness
-```{r tx-helpful-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q6-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r tx-helpful-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q6-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r tx-helpful-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
+```{r q6-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
-```{r tx-helpful-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q6-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
 # (Q7) Methadone
-```{r methadone-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q7-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r methadone-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q7-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r methadone-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
+```{r q7-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
-```{r methadone-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q7-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
 # (Q8) Buprenorphine
-```{r buprenorphine-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q8-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r buprenorphine-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q8-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r buprenorphine-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
+```{r q8-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
-```{r buprenorphine-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q8-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
 # (Q9) Naltrexone
-```{r naltrexone-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q9-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r naltrexone-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q9-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r naltrexone-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
+```{r q9-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
-```{r naltrexone-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q9-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
+
+# (Q10) - Attitudes on Addicted
+```{r q10, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+# (Q11) - Misuse: How common?
+```{r q11, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+# (Q12) - Addiction: How common?
+```{r q12, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+# (Q13) - Know resource (UCF)
+```{r q13, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+# (Q14) - Know resource (IU)
+```{r q14, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
 
 # (Q15) Policy Support
-```{r policy-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q15-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r policy-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q15-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r policy-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
+```{r q15-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
-```{r policy-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r q15-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
 
