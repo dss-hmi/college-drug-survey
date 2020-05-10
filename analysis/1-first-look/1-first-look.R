@@ -408,18 +408,24 @@ cat("\nThe following descriptives are based on N = ",
     )
 cat("\n## (Q2) - Institution","\n")
 ds2 %>% describe_item("Q2")  #  = "institution"
+cat("\n")
 cat("\n## (Q16) - Class Standing","\n")
 ds2 %>% describe_item("Q16") # = "class_standing"
+cat("\n")
 cat("\n## (Q17) - Age","\n")
 ds2 %>% describe_item("Q17") # = "age"
+cat("\n")
 cat("\n## (Q19) - Gender","\n")
 ds2 %>% describe_item("Q19") # = "gender"
+cat("\n")
 cat("\n## (Q20) - Political Views","\n")
 ds2 %>% describe_item("Q20") # = "political"
+cat("\n")
 cat("\n## (Q21) - Religius Views","\n")
 ds2 %>% describe_item("Q21") # = "religion"
 
-
+cat("\n")
+cat("\n## (Q18) - Race/Ethnicity","\n")
 cat("\n",
     "Q18: ", (ds_meta %>% filter(q_name == "Q18") %>% pull(item_label)), "\n"
 )
@@ -437,20 +443,19 @@ ds2 %>% dplyr::group_by(Q18) %>% count() %>% arrange(desc(n)) %>%
   ggplot(aes(x=reorder(race,n) ,y=n ) )+
   geom_col(fill = "salmon", alpha = .3, color = "black")+
   coord_flip()
-
+cat("\n")
+cat("\n## (Q22) - Student type","\n")
 cat("\n",
     "Q22: ", (ds_meta %>% filter(q_name == "Q22") %>% pull(item_label)), "\n"
 )
 ds2 %>% dplyr::group_by(Q22) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
+cat("\n")
+cat("\n## (Q23) - Field of Study","\n")
+
 cat("\n",
     "Q23: ", (ds_meta %>% filter(q_name == "Q23") %>% pull(item_label)), "\n"
 )
 ds2 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
-
-cat("\n",
-    "Q5: ", (ds_meta %>% filter(q_name == "Q5") %>% pull(item_label)), "\n"
-)
-ds2 %>% dplyr::group_by(Q5) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
 
 # --- need-aggregation -----------------
 
@@ -509,6 +514,15 @@ for(i in q4_varnames){
   cat("\n")
 }
 
+
+# ---- q5 -------------------
+
+cat("\n",
+    "Q5: ", (ds_meta %>% filter(q_name == "Q5") %>% pull(item_label)), "\n"
+)
+ds2 %>% dplyr::group_by(Q5) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
+
+cat("\n")
 
 # ---- ------
 # Q6 - BELIEVE TX IS HELPFUL
