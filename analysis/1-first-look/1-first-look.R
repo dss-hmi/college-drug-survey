@@ -467,27 +467,28 @@ ds_support <- ds2 %>%
   compute_total_score(rec_guide = recode_helpfu)
 
 # ---- tx-helpful-1 -------------
-cat("\n SECTION Q15 \n"
-    , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
+cat("\n SECTION Q6 \n"
+    , ds_meta %>% filter(q_name == "Q6_1") %>% pull(section)
 )
 
+max_score = length(q6_varnames)*2
 ds_support %>% TabularManifest::histogram_continuous(
   "total_score"
-  ,main_title = paste0("Total score, max = 14 \n (+2)Strongly Support, (+1)Support, (0)Neutral, (-1)Oppose, (-2)Strongly Oppose")
+  ,main_title = paste0("Total score, max = ",max_score," \n (+2)Very helpful, (+1)Somewhat , (0)Neutral, (-1)Not very helpful, (-2)Not helpul at all")
   ,bin_width = 1
 )
 
 # ---- tx-helpful-2 -----------
-cormat <- make_corr_matrix(ds_support, ds_meta, q15_varnames)
+cormat <- make_corr_matrix(ds_support, ds_meta, q6_varnames)
 cat("\n Number of complete cases = ", nrow(ds_support))
 make_corr_plot(cormat, upper="pie")
 
 # ---- tx-helpful-3 -----------
 cat("\n Prompt: \n"
-    , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
+    , ds_meta %>% filter(q_name == "Q6_1") %>% pull(section)
     ,"\n"
 )
-for(i in q15_varnames){
+for(i in q6_varnames){
   cat("\n## ", i,
       ds_meta %>% filter(q_name == i) %>% pull(q_label),
       "\n")
