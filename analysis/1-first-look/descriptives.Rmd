@@ -80,29 +80,37 @@ This section demonstrates the attrition of survey responses due to data quality
 ```
 
 # Demographics
-```{r demographics, echo=FALSE, results='show', message=FALSE, warning=FALSE, cache = T}
+```{r demographics, echo=FALSE, results='asis', message=FALSE, warning=FALSE, cache = T}
 ```
 
 # (Q4) Knowledge of Opioid Use
 ```{r q4-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
-
+## Total score
 ```{r q4-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Correlations
 ```{r q4-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
 ```{r q4-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+# (Q5) Experience with Opioid Tx
+```{r q5, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+
 # (Q6) Belief in Tx Helpfulness
 ```{r q6-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Total score
 ```{r q6-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Correlations
 ```{r q6-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
@@ -113,9 +121,11 @@ This section demonstrates the attrition of survey responses due to data quality
 ```{r q7-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Total score
 ```{r q7-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Correlations
 ```{r q7-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
@@ -126,9 +136,11 @@ This section demonstrates the attrition of survey responses due to data quality
 ```{r q8-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Total score
 ```{r q8-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Correlations
 ```{r q8-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
@@ -139,32 +151,34 @@ This section demonstrates the attrition of survey responses due to data quality
 ```{r q9-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Total score
 ```{r q9-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Correlations
 ```{r q9-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
 ```{r q9-3, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-# (Q10) - Attitudes on Addicted
+# (Q10) Attitudes on Addicted
 ```{r q10, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-# (Q11) - Misuse: How common?
+# (Q11) Misuse: How common?
 ```{r q11, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-# (Q12) - Addiction: How common?
+# (Q12) Addiction: How common?
 ```{r q12, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-# (Q13) - Know resource (UCF)
+# (Q13) Know resource (UCF)
 ```{r q13, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-# (Q14) - Know resource (IU)
+# (Q14) Know resource (IU)
 ```{r q14, echo=FALSE, results='asis', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
@@ -173,9 +187,11 @@ This section demonstrates the attrition of survey responses due to data quality
 ```{r q15-prep, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Total score
 ```{r q15-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
+## Correlations
 ```{r q15-2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, cache=T, out.width="1200px", results='show'}
 ```
 
