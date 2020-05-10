@@ -406,12 +406,17 @@ cat("After keeping only those who completed the survey within 1 hour\n",
 cat("\nThe following descriptives are based on N = ",
     ds2 %>% n_distinct("ResponseId"), " observations.\n"
     )
-
+cat("\n## (Q2) - Institution","\n")
 ds2 %>% describe_item("Q2")  #  = "institution"
+cat("\n## (Q16) - Class Standing","\n")
 ds2 %>% describe_item("Q16") # = "class_standing"
+cat("\n## (Q17) - Age","\n")
 ds2 %>% describe_item("Q17") # = "age"
+cat("\n## (Q19) - Gender","\n")
 ds2 %>% describe_item("Q19") # = "gender"
+cat("\n## (Q20) - Political Views","\n")
 ds2 %>% describe_item("Q20") # = "political"
+cat("\n## (Q21) - Religius Views","\n")
 ds2 %>% describe_item("Q21") # = "religion"
 
 
@@ -442,11 +447,23 @@ cat("\n",
 )
 ds2 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
 
+cat("\n",
+    "Q5: ", (ds_meta %>% filter(q_name == "Q5") %>% pull(item_label)), "\n"
+)
+ds2 %>% dplyr::group_by(Q5) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
+
+# --- need-aggregation -----------------
+
+path_folder_agg <- "./data-unshared/derived/custom-aggregation/"
+ds2 %>% distinct(Q20) %>% tibble::as_tibble() %>% readr::write_csv(paste0(path_folder_agg,"Q20.csv"))
+ds2 %>% distinct(Q18) %>% tibble::as_tibble() %>% readr::write_csv(paste0(path_folder_agg,"Q18.csv"))
+ds2 %>% distinct(Q22) %>% tibble::as_tibble() %>% readr::write_csv(paste0(path_folder_agg,"Q22.csv"))
+ds2 %>% distinct(Q23) %>% tibble::as_tibble() %>% readr::write_csv(paste0(path_folder_agg,"Q23.csv"))
 
 
 # ---- ------
 # Q4 - KNOWLEDGE OF TX FOR OPIOID USE
-# ---- opioid-use-prep -------------------------
+# ---- q4-prep -------------------------
 q4_varnames <- grep("Q4_", names(ds2), value = T)
 recode_opioid <- function(x){
   car::recode(var = x, recodes =
@@ -463,7 +480,7 @@ ds_opioid <- ds2 %>%
   compute_total_score(rec_guide = recode_opioid)
 # ds_opioid %>% arrange(total_score)
 
-# ---- opioid-use-1 -------------
+# ---- q4-1 -------------
 cat("\n SECTION Q4 \n"
     , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
 )
@@ -474,12 +491,12 @@ ds_opioid %>% TabularManifest::histogram_continuous(
   ,bin_width = 1
 )
 
-# ---- opioid-use-2 -----------
+# ---- q4-2 -----------
 cormat <- make_corr_matrix(ds_opioid, ds_meta, q4_varnames)
 cat("\n Number of complete cases = ", nrow(ds_opioid))
 make_corr_plot(cormat, upper="pie")
 
-# ---- opioid-use-3 -----------
+# ---- q4-3 -----------
 cat("\n Prompt: \n"
     , ds_meta %>% filter(q_name == "Q4_1") %>% pull(section)
     ,"\n"
@@ -493,7 +510,9 @@ for(i in q4_varnames){
 }
 
 
-# ---- tx-helpful-prep ----------------
+# ---- ------
+# Q6 - BELIEVE TX IS HELPFUL
+# ---- q6-prep ----------------
 q6_varnames <- grep("Q6_", names(ds2), value = T)
 # ds2 %>% group_by(Q15_1) %>% count()
 recode_helpfu <- function(x){
@@ -514,7 +533,7 @@ ds_support <- ds2 %>%
   select(c("ResponseId", q6_varnames) ) %>%
   compute_total_score(rec_guide = recode_helpfu)
 
-# ---- tx-helpful-1 -------------
+# ---- q6-1 -------------
 cat("\n SECTION Q6 \n"
     , ds_meta %>% filter(q_name == "Q6_1") %>% pull(section)
 )
@@ -526,12 +545,12 @@ ds_support %>% TabularManifest::histogram_continuous(
   ,bin_width = 1
 )
 
-# ---- tx-helpful-2 -----------
+# ---- q6-2 -----------
 cormat <- make_corr_matrix(ds_support, ds_meta, q6_varnames)
 cat("\n Number of complete cases = ", nrow(ds_support))
 make_corr_plot(cormat, upper="pie")
 
-# ---- tx-helpful-3 -----------
+# ---- q6-3 -----------
 cat("\n Prompt: \n"
     , ds_meta %>% filter(q_name == "Q6_1") %>% pull(section)
     ,"\n"
@@ -547,7 +566,9 @@ for(i in q6_varnames){
 
 
 
-# ---- methadone-prep ----------------
+# ---- ------
+# Q7 - METHADONE (STATEMENTS ABOUT)
+# ---- q7-prep ----------------
 q7_varnames <- grep("Q7_", names(ds2), value = T)
 
 recode_agreement <- function(x){
@@ -568,7 +589,7 @@ ds_methodone <- ds2 %>%
   select(c("ResponseId", q7_varnames) ) %>%
   compute_total_score(rec_guide = recode_agreement)
 
-# ---- methadone-1 -------------
+# ---- q7-1 -------------
 cat("\n SECTION Q7 \n"
     , ds_meta %>% filter(q_name == "Q7_1") %>% pull(section)
 )
@@ -579,12 +600,12 @@ ds_methodone %>% TabularManifest::histogram_continuous(
   ,bin_width = 1
 )
 
-# ---- methadone-2 -----------
+# ---- q7-2 -----------
 cormat <- make_corr_matrix(ds_methodone, ds_meta, q7_varnames)
 cat("\n Number of complete cases = ", nrow(ds_methodone))
 make_corr_plot(cormat, upper="pie")
 
-# ---- methadone-3 -----------
+# ---- q7-3 -----------
 cat("\n Prompt: \n"
     , ds_meta %>% filter(q_name == "Q7_1") %>% pull(section)
     ,"\n"
@@ -598,7 +619,9 @@ for(i in q7_varnames){
 }
 
 
-# ---- buprenorphine-prep ----------------
+# ---- ------
+# Q8 - BUPRENORPHINE (STATEMENTS ABOUT)
+# ---- q8-prep ----------------
 
 q8_varnames <- grep("Q8_", names(ds2), value = T)
 # ds2 %>% group_by(Q8_1) %>% count()
@@ -607,7 +630,7 @@ ds_buprenorphine <- ds2 %>%
   select(c("ResponseId", q8_varnames) ) %>%
   compute_total_score(rec_guide = recode_agreement)
 
-# ---- buprenorphine-1 -------------
+# ---- q8-1 -------------
 cat("\n SECTION Q8 \n"
     , ds_meta %>% filter(q_name == "Q8_1") %>% pull(section)
 )
@@ -618,12 +641,12 @@ ds_buprenorphine %>% TabularManifest::histogram_continuous(
   ,bin_width = 1
 )
 
-# ---- buprenorphine-2 -----------
+# ---- q8-2 -----------
 cormat <- make_corr_matrix(ds_buprenorphine, ds_meta, q8_varnames)
 cat("\n Number of complete cases = ", nrow(ds_buprenorphine))
 make_corr_plot(cormat, upper="pie")
 
-# ---- buprenorphine-3 -----------
+# ---- q8-3 -----------
 cat("\n Prompt: \n"
     , ds_meta %>% filter(q_name == "Q8_1") %>% pull(section)
     ,"\n"
@@ -637,7 +660,9 @@ for(i in q8_varnames){
 }
 
 
-# ---- naltrexone-prep ----------------
+# ---- ------
+# Q9 - NALTREXONE (STATEMENTS ABOUT)
+# ---- q9-prep ----------------
 
 q9_varnames <- grep("Q9_", names(ds2), value = T)
 # ds2 %>% group_by(Q9_1) %>% count()
@@ -646,7 +671,7 @@ ds_naltrexone <- ds2 %>%
   select(c("ResponseId", q9_varnames) ) %>%
   compute_total_score(rec_guide = recode_agreement)
 
-# ---- naltrexone-1 -------------
+# ---- q9-1 -------------
 cat("\n SECTION Q9 \n"
     , ds_meta %>% filter(q_name == "Q9_1") %>% pull(section)
 )
@@ -657,12 +682,12 @@ ds_naltrexone %>% TabularManifest::histogram_continuous(
   ,bin_width = 1
 )
 
-# ---- naltrexone-2 -----------
+# ---- q9-2 -----------
 cormat <- make_corr_matrix(ds_naltrexone, ds_meta, q9_varnames)
 cat("\n Number of complete cases = ", nrow(ds_naltrexone))
 make_corr_plot(cormat, upper="pie")
 
-# ---- naltrexone-3 -----------
+# ---- q9-3 -----------
 cat("\n Prompt: \n"
     , ds_meta %>% filter(q_name == "Q9_1") %>% pull(section)
     ,"\n"
@@ -677,57 +702,85 @@ for(i in q9_varnames){
 
 
 
-# ---- Q10 --------------
+# ---- ------
+# Q10 - ATTITUDES ABOUT ADDICTED TO OPIOIDS
+# ---- q10 --------------
 # Agree with statemetns
 cat("\n SECTION Q10 \n"
-    , ds_meta %>% filter(q_name == "Q10_1") %>% pull(section)
+    , ds_meta %>% filter(q_name == "Q10_1") %>% pull(section),"\n"
 )
-cat("\n")
-ds2 %>% describe_item("Q10_1")
-ds2 %>% describe_item("Q10_2")
-ds2 %>% describe_item("Q10_3")
+items <- grep("^Q10_", names(ds2), value = T)
+for(item_i in items){
+  cat("\n", ds_meta %>% filter(q_name == item_i) %>% pull(item_label),"\n")
+  ds2 %>% describe_item(item_i) %>% print()
+  cat('\n')
+}
 
-# ---- Q11 --------------
+# ---- ------
+# Q11 - HOW COMMON MISUSE?
+# ---- q11 --------------
 # How common misuse?
 cat("\n SECTION Q11 \n"
-    , ds_meta %>% filter(q_name == "Q11_1") %>% pull(section)
+    , ds_meta %>% filter(q_name == "Q11_1") %>% pull(section),"\n"
 )
 cat("\n")
-ds2 %>% describe_item("Q11_1")
-ds2 %>% describe_item("Q11_2")
-ds2 %>% describe_item("Q11_3")
-
-# ---- Q12 --------------
+items <- grep("^Q11_", names(ds2), value = T)
+for(item_i in items){
+  cat("\n", ds_meta %>% filter(q_name == item_i) %>% pull(item_label),"\n")
+  ds2 %>% describe_item(item_i) %>% print()
+  cat('\n')
+}
+# ---- ------
+# Q12 - HOW COMMON ADDICTION?
+# ---- q12 --------------
 # How common addiction?
 cat("\n SECTION Q12 \n"
-    , ds_meta %>% filter(q_name == "Q12_1") %>% pull(section)
+    , ds_meta %>% filter(q_name == "Q12_1") %>% pull(section),"\n"
 )
 cat("\n")
-ds2 %>% describe_item("Q12_1")
-ds2 %>% describe_item("Q12_2")
-ds2 %>% describe_item("Q12_3")
+items <- grep("^Q12_", names(ds2), value = T)
+for(item_i in items){
+  cat("\n", ds_meta %>% filter(q_name == item_i) %>% pull(item_label),"\n")
+  ds2 %>% describe_item(item_i) %>% print()
+  cat('\n')
+}
 
-# ---- Q13 --------------
+
+# ---- ------
+# Q13 - DO YOU KNOW THIS HELP RESOURCE? - UCF
+# ---- q13 --------------
 # Know this help resource?
 cat("\n SECTION Q13 \n"
-    , ds_meta %>% filter(q_name == "Q13_1") %>% pull(section)
+    , ds_meta %>% filter(q_name == "Q13_1") %>% pull(section), "\n"
 )
 cat("\n")
-ds2 %>% filter(Q2 == "University of Central Florida") %>% describe_item("Q13_1")
-ds2 %>% filter(Q2 == "University of Central Florida") %>% describe_item("Q13_2")
+items <- grep("^Q13_", names(ds2), value = T)
+for(item_i in items){
+  cat("\n", ds_meta %>% filter(q_name == item_i) %>% pull(item_label),"\n")
+  ds2 %>% filter(Q2 == "University of Central Florida") %>%
+    describe_item(item_i) %>% print()
+  cat('\n')
+}
 
-# ---- Q14 --------------
+# ---- ------
+# Q14 - DO YOU KNOW THIS HELP RESOURCE? - INDIANA
+# ---- q14 --------------
 # Know this help resource?
 cat("\n SECTION Q14 \n"
-    , ds_meta %>% filter(q_name == "Q14_1") %>% pull(section)
+    , ds_meta %>% filter(q_name == "Q14_1") %>% pull(section), "\n"
 )
 cat("\n")
-ds2 %>% filter(Q2 == "Indiana University-Bloomington") %>%  describe_item("Q14_1")
-ds2 %>% filter(Q2 == "Indiana University-Bloomington") %>%  describe_item("Q14_2")
+items <- grep("^Q14_", names(ds2), value = T)
+for(item_i in items){
+  cat("\n", ds_meta  %>%filter(q_name == item_i) %>% pull(item_label),"\n")
+  ds2 %>% filter(Q2 == "Indiana University-Bloomington") %>%
+    describe_item(item_i) %>% print()
+  cat('\n')
+}
 
-
-
-# ---- policy-prep ----------------
+# ---- ------
+# Q15 - ATTITUDES ABOUT POLICIES
+# ---- q15-prep ----------------
 
 q15_varnames <- grep("Q15_", names(ds2), value = T)
 # ds2 %>% group_by(Q15_1) %>% count()
@@ -750,7 +803,7 @@ ds_support <- ds2 %>%
   select(c("ResponseId", q15_varnames) ) %>%
   compute_total_score(rec_guide = recode_support)
 
-# ---- policy-1 -------------
+# ---- q15-1 -------------
 cat("\n SECTION Q15 \n"
     , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
 )
@@ -761,12 +814,12 @@ ds_support %>% TabularManifest::histogram_continuous(
   ,bin_width = 1
 )
 
-# ---- policy-2 -----------
+# ---- q15-2 -----------
 cormat <- make_corr_matrix(ds_support, ds_meta, q15_varnames)
 cat("\n Number of complete cases = ", nrow(ds_support))
 make_corr_plot(cormat, upper="pie")
 
-# ---- policy-3 -----------
+# ---- q15-3 -----------
 cat("\n Prompt: \n"
     , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
     ,"\n"
@@ -785,7 +838,7 @@ for(i in q15_varnames){
 
 
 # ----- publisher --------------------
-path <- "./analysis/1-first-look/demographics-substance.Rmd"
+path <- "./analysis/1-first-look/descriptives.Rmd"
 rmarkdown::render(
   input = path ,
   output_format=c(
