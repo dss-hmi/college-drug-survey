@@ -491,8 +491,6 @@ for(i in q4_varnames){
 
 
 # ---- tx-helpful-prep ----------------
-ds2 %>% group_by(Q6_1) %>% count()
-
 q6_varnames <- grep("Q6_", names(ds2), value = T)
 # ds2 %>% group_by(Q15_1) %>% count()
 recode_helpfu <- function(x){
@@ -546,7 +544,7 @@ for(i in q6_varnames){
 
 
 
-# ---- methodone-prep ----------------
+# ---- methadone-prep ----------------
 q7_varnames <- grep("Q7_", names(ds2), value = T)
 
 recode_agreement <- function(x){
@@ -567,7 +565,7 @@ ds_methodone <- ds2 %>%
   select(c("ResponseId", q7_varnames) ) %>%
   compute_total_score(rec_guide = recode_agreement)
 
-# ---- methodone-1 -------------
+# ---- methadone-1 -------------
 cat("\n SECTION Q7 \n"
     , ds_meta %>% filter(q_name == "Q7_1") %>% pull(section)
 )
@@ -578,12 +576,12 @@ ds_methodone %>% TabularManifest::histogram_continuous(
   ,bin_width = 1
 )
 
-# ---- methodone-2 -----------
+# ---- methadone-2 -----------
 cormat <- make_corr_matrix(ds_methodone, ds_meta, q7_varnames)
 cat("\n Number of complete cases = ", nrow(ds_methodone))
 make_corr_plot(cormat, upper="pie")
 
-# ---- methodone-3 -----------
+# ---- methadone-3 -----------
 cat("\n Prompt: \n"
     , ds_meta %>% filter(q_name == "Q7_1") %>% pull(section)
     ,"\n"
