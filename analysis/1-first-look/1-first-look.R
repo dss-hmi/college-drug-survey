@@ -443,6 +443,9 @@ cat("\n",
 ds2 %>% dplyr::group_by(Q23) %>% count() %>% arrange(desc(n))%>% neat()# = "student_type"
 
 
+
+# ---- ------
+# Q4 - KNOWLEDGE OF TX FOR OPIOID USE
 # ---- opioid-use-prep -------------------------
 q4_varnames <- grep("Q4_", names(ds2), value = T)
 recode_opioid <- function(x){
@@ -674,6 +677,56 @@ for(i in q9_varnames){
 
 
 
+# ---- Q10 --------------
+# Agree with statemetns
+cat("\n SECTION Q10 \n"
+    , ds_meta %>% filter(q_name == "Q10_1") %>% pull(section)
+)
+cat("\n")
+ds2 %>% describe_item("Q10_1")
+ds2 %>% describe_item("Q10_2")
+ds2 %>% describe_item("Q10_3")
+
+# ---- Q11 --------------
+# How common misuse?
+cat("\n SECTION Q11 \n"
+    , ds_meta %>% filter(q_name == "Q11_1") %>% pull(section)
+)
+cat("\n")
+ds2 %>% describe_item("Q11_1")
+ds2 %>% describe_item("Q11_2")
+ds2 %>% describe_item("Q11_3")
+
+# ---- Q12 --------------
+# How common addiction?
+cat("\n SECTION Q12 \n"
+    , ds_meta %>% filter(q_name == "Q12_1") %>% pull(section)
+)
+cat("\n")
+ds2 %>% describe_item("Q12_1")
+ds2 %>% describe_item("Q12_2")
+ds2 %>% describe_item("Q12_3")
+
+# ---- Q13 --------------
+# Know this help resource?
+cat("\n SECTION Q13 \n"
+    , ds_meta %>% filter(q_name == "Q13_1") %>% pull(section)
+)
+cat("\n")
+ds2 %>% filter(Q2 == "University of Central Florida") %>% describe_item("Q13_1")
+ds2 %>% filter(Q2 == "University of Central Florida") %>% describe_item("Q13_2")
+
+# ---- Q14 --------------
+# Know this help resource?
+cat("\n SECTION Q14 \n"
+    , ds_meta %>% filter(q_name == "Q14_1") %>% pull(section)
+)
+cat("\n")
+ds2 %>% filter(Q2 == "Indiana University-Bloomington") %>%  describe_item("Q14_1")
+ds2 %>% filter(Q2 == "Indiana University-Bloomington") %>%  describe_item("Q14_2")
+
+
+
 # ---- policy-prep ----------------
 
 q15_varnames <- grep("Q15_", names(ds2), value = T)
@@ -725,6 +778,7 @@ for(i in q15_varnames){
   ds2 %>% rundown(qn = i) %>% print()
   cat("\n")
 }
+
 
 
 
