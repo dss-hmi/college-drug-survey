@@ -333,9 +333,9 @@ ds1 <- ds0 %>%
 # ---- survey-response  -------------------------
 cat("Initial responses, N = ", ds1 %>% n_distinct("ResponseId"))
 ds1 %>% group_by(Status) %>% count() %>% neat()
-ds2 <- ds1 %>% filter(Status == "IP Address")
+ds1 <- ds1 %>% filter(Status == "IP Address")
 cat("After keeping only `IP Address`\n",
-    "Remaining responses, N =", ds2 %>% n_distinct("ResponseId"))
+    "Remaining responses, N =", ds1 %>% n_distinct("ResponseId"))
 
 
 ds1 %>% group_by(Finished) %>% count() %>% neat()
@@ -396,10 +396,12 @@ d %>% filter(hours < 1) %>%
     )
   )
 
-ds2 <- ds1 %>% filter(`Duration (in seconds)` < 60*60 )
-cat("After keeping only those who completed the survey within 1 hour\n",
-    "Remaining responses, N =", ds2 %>% n_distinct("ResponseId"))
+# ds2 <- ds1 %>% filter(`Duration (in seconds)` < 60*60 )
+# cat("After keeping only those who completed the survey within 1 hour\n",
+    # "Remaining responses, N =", ds2 %>% n_distinct("ResponseId"))
 
+ds2 <- ds1
+ds2 %>% readr::write_rds("./data-unshared/derived/dto-first-look.rds")
 
 # ---- demographics -----------------------------------------
 
