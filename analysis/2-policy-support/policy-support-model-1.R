@@ -249,11 +249,18 @@ ds_model <-
   dplyr::left_join(ds_demo ) %>%
   tidyr::drop_na()
 
-# ----- groom-predictors --------------------
+ds_model %>% glimpse()
+
+r# ----- groom-predictors --------------------
 
 ds_model %>% group_by(institution) %>% count()
 ds_model %>% group_by(sex) %>% count()
 ds_model %>% group_by(class_standing) %>% count()
+ds_model %>% group_by(age) %>% count()
+ds_model %>% group_by(race) %>% count()
+ds_model %>% group_by(political) %>% count()
+ds_model %>% group_by(religion) %>% count()
+ds_model %>% group_by(studen) %>% count()
 
 ds_model <- ds_model %>%
   dplyr::mutate(
@@ -261,10 +268,56 @@ ds_model <- ds_model %>%
       institution,
       "UCF" = "University of Central Florida"
       ,"IUB" = "Indiana University-Bloomington"
-
     )
-  )
+    ,over21 = forcats::fct_recode(age
+      ,"TRUE" = "31-40 years old"
+      ,"TRUE" = "21-30 years old"
+      ,"FALSE" = "Under 20 years old"
+    )
+    ,nonwhite = ifelse(race == "White/Caucasian", FALSE, TRUE)
+    ,leaning = forcats::fct_recode(
+      political
+      , "left" = "Democrat"
+      , "left" = "Very liberal"
+      , "left" = "Somewhat liberal"
+      , "right" = "Republican"
+      , "right" = "Very conservative"
+      , "right" = "Somewhat conservative"
+      , "middle" = "Independent/moderate"
+      , "other" = "Libertarian"
+      , "other" = "Other"
+      , "other" = "Unsure"
+      , "other" = "I choose not to answer"
+      )
+    ,full_time = stringr::str_detect(student_type,"I am a full-time student")
+    ,greek = stringr::str_detect(student_type, "I am a fraternity or sorority member")
+    ,health_major = stringr::str_detect(field_of_study,"Psychology|Health sciences" )
+    )
 
+
+# outcome = hr_support
+# predictors
+var_predictors <- c(
+  "knowledge_oud_tx"
+  ,"institution"
+  ,"class_standing"
+  ,"over21"
+  ,"nonwhite"
+  ,"sex"
+  ,"leaning"
+  ,"religion"
+  ,"full_time"
+  ,"greek"
+  ,"health_major"
+)
+
+
+
+ds_model %>% distinct(health_major, field_of_study) %>% View()
+
+ds_model <- ds_model %>%
+  filter(sex %in% c("Female","Male")) %>%
+  filter(class_standing %in% c("Freshman", "Sophomore","Junior","Senior"))
 
 
 
