@@ -188,7 +188,7 @@ ds_demo <- ds2 %>%
   select(c("ResponseId", names(demographic)))
 names(ds_demo) <- c("ResponseId", demographic)
 
-
+# - Q4 - kNOWLEDGE OF OUD TREATMENTS
 recode_opioid <- function(x){
   car::recode(var = x, recodes =
                 "
@@ -204,6 +204,33 @@ ds_opioid <- ds2 %>%
   compute_total_score(rec_guide = recode_opioid) %>%
   rename("knowledge_oud_tx" = "total_score")
 
+# Q6 - BELIEF IN USEFULNESS OF TH TREATMENT
+recode_helpful <- function(x){
+  car::recode(var = x, recodes =
+                "
+  ;'Very helpful'            = 1
+  ;'Somewhat helpful'        = 0
+  ;'Neutral'                 = 0
+  ;'Not very helpful'        = 0
+  ;'Not helpful at all'      = 0
+  ;'Unsure'                  = NA
+  ;'I choose not to answer'  = NA
+  "
+  )
+}
+
+varname_scale <- ds2 %>% select(starts_with("Q6_")) %>% names()
+ds_useful <- ds2 %>%
+  select(c("ResponseId", starts_with("Q6_")) ) %>%
+  dplyr::mutate_at(varname_scale, recode_helpful) %>%
+  mutate(
+    n_helpful = rowSums(is.na(.[varname_scale]))
+  )
+
+
+  compute_total_score(rec_guide = recode_helpful)
+
+# q15 - POLICY SUPPORT
 recode_support <- function(x){
   car::recode(var = x, recodes =
                 "
@@ -224,6 +251,12 @@ ds_support <- ds2 %>%
   compute_total_score(rec_guide = recode_support) %>%
   rename("hr_support" = "total_score")
 
+
+
+
+
+
+
 # ---- q15-1 -------------
 cat("\n SECTION Q15 \n"
     , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
@@ -243,26 +276,27 @@ skimr::skim(ds_support)
 
 # ----- create-ds-for-model -----------------
 
-ds_model <-
+# Individuals for whom the total HM_SUPPORT score could be computed (N = 725)
+dsm0 <-
   ds_support %>% select(ResponseId, hr_support) %>%
   dplyr::left_join(ds_opioid %>% select(ResponseId,knowledge_oud_tx)) %>%
-  dplyr::left_join(ds_demo ) %>%
-  tidyr::drop_na()
+  dplyr::left_join(ds_demo )
 
-ds_model %>% glimpse()
+dsm0 %>% glimpse()
 
-r# ----- groom-predictors --------------------
+# ----- groom-predictors --------------------
+# create the dataset for modeling
 
-ds_model %>% group_by(institution) %>% count()
-ds_model %>% group_by(sex) %>% count()
-ds_model %>% group_by(class_standing) %>% count()
-ds_model %>% group_by(age) %>% count()
-ds_model %>% group_by(race) %>% count()
-ds_model %>% group_by(political) %>% count()
-ds_model %>% group_by(religion) %>% count()
-ds_model %>% group_by(studen) %>% count()
+dsm0 %>% group_by(institution) %>% count()
+dsm0 %>% group_by(sex) %>% count()
+dsm0 %>% group_by(class_standing) %>% count()
+dsm0 %>% group_by(age) %>% count()
+dsm0 %>% group_by(race) %>% count()
+dsm0 %>% group_by(political) %>% count()
+dsm0 %>% group_by(religion) %>% count()
+dsm0 %>% group_by(student_type) %>% count()
 
-ds_model <- ds_model %>%
+dsm1 <- dsm0 %>%
   dplyr::mutate(
     institution = forcats::fct_recode(
       institution,
@@ -272,8 +306,10 @@ ds_model <- ds_model %>%
     ,over21 = forcats::fct_recode(age
       ,"TRUE" = "31-40 years old"
       ,"TRUE" = "21-30 years old"
+      ,"TRUE" = "61+ years old"
       ,"FALSE" = "Under 20 years old"
     )
+    ,over21 = relevel(over21, ref = "FALSE")
     ,nonwhite = ifelse(race == "White/Caucasian", FALSE, TRUE)
     ,leaning = forcats::fct_recode(
       political
@@ -289,15 +325,197 @@ ds_model <- ds_model %>%
       , "other" = "Unsure"
       , "other" = "I choose not to answer"
       )
-    ,full_time = stringr::str_detect(student_type,"I am a full-time student")
-    ,greek = stringr::str_detect(student_type, "I am a fraternity or sorority member")
-    ,health_major = stringr::str_detect(field_of_study,"Psychology|Health sciences" )
+    ,leaning = forcats::fct_relevel(leaning, "right","middle", "left", "other")
+    # ,full_time = stringr::str_detect(student_type,"I am a full-time student") %>% factor()
+    ,greek = stringr::str_detect(student_type, "I am a fraternity or sorority member") %>% factor()
+    ,greek = relevel(greek, ref = "FALSE")
+    ,health_major = stringr::str_detect(field_of_study,"Psychology|Health sciences" ) %>% factor()
+    ,health_major = relevel(health_major, ref = "FALSE")
     )
-
+dsm1 %>% glimpse()
 
 # outcome = hr_support
 # predictors
-var_predictors <- c(
+# the list of predictors we want to use
+predictors_00 <- c(
+  "knowledge_oud_tx"
+  ,"institution"
+  ,"class_standing"
+  ,"over21"
+  ,"nonwhite"
+  ,"sex"
+  ,"leaning"
+  ,"religion"
+  ,"greek"
+  ,"health_major"
+)
+
+dsm1 %>% group_by(institution) %>% count()
+dsm1 %>% group_by(class_standing) %>% count()
+dsm1 %>% group_by(over21) %>% count()
+dsm1 %>% group_by(nonwhite) %>% count()
+dsm1 %>% group_by(sex) %>% count()
+dsm1 %>% group_by(leaning) %>% count()
+dsm1 %>% group_by(religion) %>% count()
+dsm1 %>% group_by(greek) %>% count()
+dsm1 %>% group_by(health_major) %>% count()
+
+
+# the dataset with no missing values on any of the predictors
+dsm2 <- dsm1 %>%
+  filter(sex %in% c("Male","Female") ) %>%
+  filter(class_standing %in% c("Freshman", "Sophomore","Junior","Senior")) %>%
+  filter(religion %in% c("Very important", "Moderately important", "Not important"))
+
+# ds_model %>% distinct(health_major, field_of_study) %>% View()
+
+# --- eda-1 ---------------------
+
+ds_model %>% TabularManifest::histogram_continuous("hr_support")
+ds_model %>% TabularManifest::histogram_continuous("knowledge_oud_tx")
+
+set.seed(42)
+dsm2 %>%
+  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = institution))+
+  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = class_standing))+
+  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = over21))+
+  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = nonwhite))+
+  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = sex))+
+  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = leaning))+
+  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = religion))+
+  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = greek))+
+  ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = health_major))+
+  geom_jitter()+
+  geom_smooth(method="lm", se = F)+
+  ggpmisc::stat_poly_eq(formula = y ~ + x ,
+                        aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                        parse = TRUE)
+
+library(moderndive)
+ds_model %>% get_correlation(hr_support ~ knowledge_oud_tx)
+
+# ----- define-modeling-functions --------------------
+
+run_regression <- function(d,p){
+  # d <- ds_model
+  # p <- var_predictors
+  # outcome <- "hr_support ~ "
+  #
+  # browser()
+  ls_out <- list()
+  eq_formula <- as.formula(paste0(outcome, paste(p, collapse = " + ") ) )
+
+  model <- stats::glm(
+    formula = eq_formula
+    # ,family = "binomial"
+    ,family=gaussian(link="identity")
+    ,data = d %>%
+      select(-ResponseId )
+  )
+
+  ls_out[["equation"]] <- eq_formula
+  ls_out[["model"]] <- model
+
+    return(ls_out)
+}
+# How to use
+# lsm00 <- ds_modeling %>% run_regression(predictors_00)
+# model <- lsm00$model
+
+
+make_result_table <- function(
+  model_object
+){
+  # browser()
+  (cf <- summary(model_object)$coefficients)
+  # (cf <- model_object$coefficients)
+  # (ci <- exp(cbind(coef(model_object), confint(model_object))))
+  # (ci <- exp(cbind(coef(model_object), confint(model_object))))
+
+  # if(ncol(ci)==2L){
+  #   (ci <- t(ci)[1,])
+  #   ds_table <- cbind.data.frame("coef_name" = rownames(cf), cf,"V1"=NA,"2.5 %" = ci[1], "97.5 %"=ci[2])
+  # }else{
+  # ds_table <- cbind.data.frame("coef_name" = rownames(cf), cf,ci)
+  # }
+  ds_table <- cbind.data.frame("coef_name" = rownames(cf), cf)
+  row.names(ds_table) <- NULL
+  ds_table <- plyr::rename(ds_table, replace = c(
+    "Estimate" = "estimate",
+    "Std. Error"="sderr",
+    # "z value" ="zvalue",
+    "t value" ="tvalue",
+    # "Pr(>|z|)"="pvalue"
+    "Pr(>|t|)"="pvalue"
+    # "V1"="odds",
+    # "2.5 %"  = "ci95_low",
+    # "97.5 %"  ="ci95_high"
+  ))
+  # prepare for display
+  ds_table$est <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$estimate, 2))
+  ds_table$se <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$sderr, 2))
+  ds_table$t <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$tvalue, 3))
+  # ds_table$z <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$zvalue, 3))
+  ds_table$p <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$pvalue, 4))
+  # ds_table$p <- as.numeric(round(ds_table$pvalue, 4))
+  # ds_table$odds <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$odds, 2))
+  # ds_table$odds_ci <- paste0("(",
+  #                            gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$ci95_low,2)), ",",
+  #                            gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$ci95_high,2)), ")"
+  # )
+
+  ds_table$sign_ <- cut(
+    x = ds_table$pvalue,
+    breaks = c(-Inf, .001, .01, .05, .10, Inf),
+    labels = c("<=.001", "<=.01", "<=.05", "<=.10", "> .10"), #These need to coordinate with the color specs.
+    right = TRUE, ordered_result = TRUE
+  )
+  ds_table$sign <- cut(
+    x = ds_table$pvalue,
+    breaks = c(-Inf, .001, .01, .05, .10, Inf),
+    labels = c("***", "**", "*", ".", " "), #These need to coordinate with the color specs.
+    right = TRUE, ordered_result = TRUE
+  )
+  # ds_table$display_odds <- paste0(ds_table$odds," ",ds_table$sign , "\n",  ds_table$odds_ci)
+
+  ds_table <- ds_table %>%
+    dplyr::select_(
+      "sign",
+      "coef_name",
+      # "odds",
+      # "odds_ci",
+      "est",
+      "se",
+      "p",
+      "sign_"
+    )
+
+  return(ds_table)
+}
+# How to use
+# model_1glm %>% make_result_table()
+
+get_rsquared <- function(m){
+  cat("R-Squared, Proportion of Variance Explained = ",
+      scales::percent((1 - (summary(m)$deviance/summary(m)$null.deviance)),accuracy = .01)
+      , "\n")
+}
+# How to use
+# model_1glm %>% get_rsquared()
+
+get_model_fit <- function(m){
+  cat("MODEL FIT",
+      "\nChi-Square = ", with(m, null.deviance - deviance),
+      "\ndf = ", with(m, df.null - df.residual),
+      "\np-value = ", with(m, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE)),"\n"
+  )
+}
+# How to use
+# model_1glm %>% get_model_fit()
+
+# ---- m00 ------------------
+outcome <- "hr_support ~ "
+predictors_00 <- c(
   "knowledge_oud_tx"
   ,"institution"
   ,"class_standing"
@@ -307,13 +525,130 @@ var_predictors <- c(
   ,"leaning"
   ,"religion"
   ,"full_time"
-  ,"greek"
+  # ,"greek"
   ,"health_major"
 )
+lsm00 <- ds_model %>% run_regression(predictors_00)
+model <- lsm00$model
+print(model$formula, showEnv = F)
+model %>% get_rsquared()
+model %>% get_model_fit()
+summary(model) %>% print()
+exp(cbind(OR = coef(model), confint(model))) #%>% neat()
+# summary(model)$coefficients %>% neat(output_format = "pandoc") %>% print()
+# https://datascienceplus.com/perform-logistic-regression-in-r/
+anova(model, test="Chisq") %>% print()
+
+
+# ----- individual-predictors --------------------
+outcome <- "hr_support ~"
+# modeling the outcome using a single predictor
+
+l <- ds_model %>% run_regression("knowledge_oud_tx")
+l$model %>% get_rsquared() # 0.55%
+l$model %>% make_result_table()
+
+l <- ds_model %>% run_regression("institution")
+l$model %>% get_rsquared() # 0.45%
+l$model %>% make_result_table()
+
+l <- ds_model %>%
+  filter(class_standing %in% c("Freshman", "Sophomore","Junior","Senior")) %>%
+  mutate(
+    class_standing = forcats::fct_drop(class_standing)
+  ) %>%
+  mutate(
+      class_standing = forcats::fct_relevel(
+        class_standing,
+        "Freshman", "Sophomore","Junior","Senior"
+      )
+  ) %>%
+  run_regression("class_standing")
+l$model %>% get_rsquared() # 3.07%
+l$model %>% make_result_table()
+
+l <- ds_model %>% run_regression("over21")
+l$model %>% get_rsquared() # 0.45%
+l$model %>% make_result_table()
+
+
+l <- ds_model %>% run_regression("nonwhite")
+l$model %>% get_rsquared() # 0.29%
+l$model %>% make_result_table()
+ds_model %>% group_by(nonwhite) %>% count()
+
+l <- ds_model %>%
+  filter(sex %in% c("Male","Female") ) %>%
+  run_regression("sex")
+l$model %>% get_rsquared() # 0.64%
+l$model %>% make_result_table()
+
+l <- ds_model %>%
+  # filter(religion %in% c("Male","Female") ) %>%
+  run_regression("religion")
+l$model %>% get_rsquared() # 0.64%
+l$model %>% make_result_table()
+
+ds_model %>% group_by(religion) %>% count()
+
+# ---- m0 ------------------
+outcome <- "hr_support ~ "
+predictors_0 <- c(
+  "knowledge_oud_tx"
+)
+lsm0 <- ds_model %>% run_regression(predictors_0)
+model <- lsm0$model
+print(model$formula, showEnv = F)
+model %>% get_rsquared()
+model %>% get_model_fit()
+summary(model) %>% print()
+summary(model)$coefficients %>% neat(output_format = "pandoc") %>% print()
+# https://datascienceplus.com/perform-logistic-regression-in-r/
+anova(model, test="Chisq") %>% print()
+
+# ---- m1 ------------------
+ds_m1 <- ds_model %>%
+  filter(sex  %in% c("Male", "Female")) %>%
+  mutate(
+    sex = relevel(sex , ref = "Male")
+  )
+outcome <- "hr_support ~ "
+predictors_1 <- c(
+  "knowledge_oud_tx"
+  ,"sex"
+)
+lsm1 <- ds_m1 %>% run_regression(predictors_1)
+model <- lsm1$model
+print(model$formula, showEnv = F)
+model %>% get_rsquared()
+model %>% get_model_fit()
+summary(model) %>% print()
+# summary(model)$coefficients %>% neat(output_format = "pandoc") %>% print()
+# https://datascienceplus.com/perform-logistic-regression-in-r/
+anova(model, test="Chisq") %>% print()
 
 
 
-ds_model %>% distinct(health_major, field_of_study) %>% View()
+# ---- model-1 ----------------------
+model_1glm <- stats::glm(
+  formula = hr_support ~ knowledge_oud_tx
+  ,family = gaussian(link = "identity")
+  , data = ds_model
+)
+
+model_1lm <- stats::lm(hr_support ~ knowledge_oud_tx,data=ds_model)
+model_1 %>% get_regression_table()
+model_1 %>% summary()
+
+
+
+model_1glm
+
+model_object <- model_1glm
+
+
+
+
 
 ds_model <- ds_model %>%
   filter(sex %in% c("Female","Male")) %>%
