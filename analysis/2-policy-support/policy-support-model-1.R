@@ -227,8 +227,16 @@ ds_useful <- ds2 %>%
     n_helpful = rowSums(is.na(.[varname_scale]))
   )
 
+ds2 <- ds2 %>%
+  mutate(
+    exp_w_1plus_oudtx = ifelse( (Q5 %in% c("I choose not to answer") | is.na(Q5) ), 0, 1)
+    ,exp_w_peer_group = stringr::str_detect(Q5, "peer support group")
+    ,exp_w_peer_group = tidyr::replace_na(exp_w_peer_group,0)
+  )
+# ds2 %>% distinct(Q5,exp_w_peer_group) %>% View()
 
-  compute_total_score(rec_guide = recode_helpful)
+ds2 %>% group_by(exp_w_peer_group) %>% count()
+ds2 %>% group_by(exp_w_1plus_oudtx) %>% count()
 
 # q15 - POLICY SUPPORT
 recode_support <- function(x){
@@ -250,11 +258,6 @@ ds_support <- ds2 %>%
   select(c("ResponseId", starts_with("Q15_")) ) %>%
   compute_total_score(rec_guide = recode_support) %>%
   rename("hr_support" = "total_score")
-
-
-
-
-
 
 
 # ---- q15-1 -------------
@@ -368,6 +371,77 @@ dsm2 <- dsm1 %>%
   filter(religion %in% c("Very important", "Moderately important", "Not important"))
 
 # ds_model %>% distinct(health_major, field_of_study) %>% View()
+
+
+# ----- ----------------
+dsm2 %>% glimpse()
+d <- dsm2
+var1 <- "sex"
+var2 <- "class_standing"
+
+# Function for exploring relationship between two categorical variables
+make_bi_bar_graph <- function(d, var1, var2, label1, label2, labels=F){
+  # d <- dsm2
+  # var1 <- "sex"
+  # var2 <- "sex"
+  #
+  d1 <- d %>%
+    group_by(.dots = c(var1, var2) )%>%
+    summarize(
+      n_people = n()
+    ) %>%
+    ungroup() %>%
+    mutate(
+      total = sum(n_people, na.rm =T)
+    ) %>%
+    group_by(.dots = var1) %>%
+    mutate(
+      total_1 = sum(n_people, na.rm = T)
+      ,pct_1 = scales::label_percent()(total_1/total)
+      ,pct_12 = scales::label_percent()(n_people/total_1)
+    )
+  n_total = d1 %>% pull(total) %>% unique()
+
+  g1 <- d1 %>%
+    ggplot(aes_string(x = var1, y = "n_people", fill = var2 ))+
+    geom_col(position = position_dodge())+
+    geom_text(aes(label = n_people),position = position_dodge(.9), vjust = 1.5, color = "white", size = 5 )+
+    scale_fill_viridis_d(begin = 0, end = .8, direction = -1, option = "plasma")+
+    labs( title = paste0("Sample size, N = ", n_total))
+
+  if(var1 == var2){
+    g1 <- g1 +
+      geom_text(aes_string(label = "pct_1"),position = position_dodge(.9), vjust = -.5, color = "black", size = 4)
+  }else{
+    g1 <- g1 +
+      geom_text(aes_string(label = "pct_12"),position = position_dodge(.9), vjust = -.5, color = "black", size = 4)
+  }
+
+  g1
+
+}
+# How to use
+
+dsm2 %>% make_bi_bar_graph("sex","class_standing")
+dsm2 %>% make_bi_bar_graph("class_standing","sex")
+dsm2 %>% make_bi_bar_graph("sex","sex")
+dsm2 %>% make_bi_bar_graph("class_standing","class_standing")
+
+dt1 %>%
+  ggplot(aes(x = returned_to_care, y = n_people, fill = letter_sent))+
+  geom_col(position = position_dodge())+
+  geom_text(aes(label = n_people),position = position_dodge(.9), vjust = 1.5, color = "white", size = 5 )+
+  geom_text(aes(label = pct_returned_to_care),position = position_dodge(.9), vjust = -.5, color = "blue", size = 4)+
+  scale_fill_manual(values = letter_sent_colors)+
+  scale_y_continuous(limit = c(0,450))+
+  theme_minimal()+
+  theme(legend.position = "top")+
+  labs(
+    title = "Patients returning to care after in-mail follow up"
+    ,x = "", y = "Number of patients"
+    ,fill = ""
+  )
+
 
 # --- eda-1 ---------------------
 
