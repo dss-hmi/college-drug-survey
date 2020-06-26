@@ -115,6 +115,101 @@ compute_total_score <- function(d, id_name = "ResponseId", rec_guide){
     dplyr::select(-allna,-anyna)
   return(d_out)
 }
+
+
+# Function for exploring relationship between two categorical variables
+make_bi_bar_graph <- function(d, var1, var2, label1, label2, labels=F){
+  # d <- dsm2
+  # var1 <- "sex"
+  # var2 <- "sex"
+  #
+  d1 <- d %>%
+    group_by(.dots = c(var1, var2) )%>%
+    summarize(
+      n_people = n()
+    ) %>%
+    ungroup() %>%
+    mutate(
+      total = sum(n_people, na.rm =T)
+    ) %>%
+    group_by(.dots = var1) %>%
+    mutate(
+      total_1 = sum(n_people, na.rm = T)
+      ,pct_1 = scales::label_percent()(total_1/total)
+      ,pct_12 = scales::label_percent()(n_people/total_1)
+    )
+  n_total = d1 %>% pull(total) %>% unique()
+
+  g1 <- d1 %>%
+    ggplot(aes_string(x = var1, y = "n_people", fill = var2 ))+
+    geom_col(position = position_dodge())+
+    geom_text(aes(label = n_people),position = position_dodge(.9), vjust = 1.5, color = "white", size = 5 )+
+    scale_fill_viridis_d(begin = 0, end = .8, direction = -1, option = "plasma")+
+    labs( title = paste0("Sample size, N = ", n_total))
+
+  if(var1 == var2){
+    g1 <- g1 +
+      geom_text(aes_string(label = "pct_1"),position = position_dodge(.9), vjust = -.5, color = "black", size = 4)
+  }else{
+    g1 <- g1 +
+      geom_text(aes_string(label = "pct_12"),position = position_dodge(.9), vjust = -.5, color = "black", size = 4)
+  }
+
+  g1
+
+}
+# How to use
+# dsm2 %>% make_bi_bar_graph("sex","class_standing")
+# dsm2 %>% make_bi_bar_graph("class_standing","sex")
+# dsm2 %>% make_bi_bar_graph("sex","sex")
+# dsm2 %>% make_bi_bar_graph("class_standing","class_standing")
+
+
+make_bi_mosaic <- function(d, var1, var2){
+
+  # d <- dsm2 %>% select(sex, class_standing)
+  # var1 <- "class_standing"
+  # var2 <- "sex"
+
+  d1 <- d %>%
+    dplyr::rename(
+      "v1" = var1
+      ,"v2" = var2
+    ) %>%
+    mutate(
+      v1 = forcats::fct_drop(v1)
+      ,v2 = forcats::fct_drop(v2)
+    )
+
+  mosaicplot(~v1 + v2, data = d1,
+             main = paste0("Bivariate distribution between (", var1, ") and (", var2,")")
+             ,xlab = var1, y = var2
+             ,shade = TRUE)
+}
+# How to use:
+# dsm2 %>% make_bi_mosaic("sex", "class_standing")
+# dsm2 %>% make_bi_mosaic("sex", "over21")
+
+
+# Function to conduct an independence test between two categorical variables
+test_independence <- function(d, var1, var2){
+  d %>%
+    dplyr::select(.dots = c(var1, var2)) %>%
+    sjPlot::sjtab(
+      fun = "xtab"
+      ,var.labels=c(var1, var2)
+      ,show.row.prc=T
+      ,show.col.prc=T
+      ,show.summary=T
+      ,show.exp=T
+      ,show.legend=T
+    )
+}
+# How to use
+# dsm2 %>% test_independence("sex", "religion")
+# dsm2 %>% test_independence("religion", "class_standing")
+
+
 # ---- load-data ---------------------------------------------------------------
 # the production of the dto object is now complete
 # we verify its structure and content:
@@ -209,7 +304,7 @@ recode_helpful <- function(x){
   car::recode(var = x, recodes =
                 "
   ;'Very helpful'            = 1
-  ;'Somewhat helpful'        = 0
+  ;'Somewhat helpful'        = 1
   ;'Neutral'                 = 0
   ;'Not very helpful'        = 0
   ;'Not helpful at all'      = 0
@@ -220,23 +315,32 @@ recode_helpful <- function(x){
 }
 
 varname_scale <- ds2 %>% select(starts_with("Q6_")) %>% names()
-ds_useful <- ds2 %>%
+ds_helpful <- ds2 %>%
   select(c("ResponseId", starts_with("Q6_")) ) %>%
   dplyr::mutate_at(varname_scale, recode_helpful) %>%
+  dplyr::mutate_at(varname_scale, as.character) %>%
+  dplyr::mutate_at(varname_scale, as.integer) %>%
   mutate(
-    n_helpful = rowSums(is.na(.[varname_scale]))
-  )
+    n_helpful = rowSums(.[varname_scale], na.rm =T)
+    ,tx_helpful = (n_helpful > 0)
+  ) %>%
+  select(ResponseId, n_helpful, tx_helpful)
 
-ds2 <- ds2 %>%
+ds_helpful %>% group_by(n_helpful) %>% count()
+ds_helpful %>% group_by(tx_helpful) %>% count()
+
+
+ds_experience <- ds2 %>%
   mutate(
     exp_w_1plus_oudtx = ifelse( (Q5 %in% c("I choose not to answer") | is.na(Q5) ), 0, 1)
     ,exp_w_peer_group = stringr::str_detect(Q5, "peer support group")
     ,exp_w_peer_group = tidyr::replace_na(exp_w_peer_group,0)
-  )
+  ) %>%
+  select(ResponseId, exp_w_1plus_oudtx, exp_w_peer_group)
 # ds2 %>% distinct(Q5,exp_w_peer_group) %>% View()
 
-ds2 %>% group_by(exp_w_peer_group) %>% count()
-ds2 %>% group_by(exp_w_1plus_oudtx) %>% count()
+ds_experience %>% group_by(exp_w_peer_group) %>% count()
+ds_experience %>% group_by(exp_w_1plus_oudtx) %>% count()
 
 # q15 - POLICY SUPPORT
 recode_support <- function(x){
@@ -282,11 +386,14 @@ skimr::skim(ds_support)
 # Individuals for whom the total HM_SUPPORT score could be computed (N = 725)
 dsm0 <-
   ds_support %>% select(ResponseId, hr_support) %>%
+  dplyr::left_join(ds_demo ) %>%
   dplyr::left_join(ds_opioid %>% select(ResponseId,knowledge_oud_tx)) %>%
-  dplyr::left_join(ds_demo )
+  dplyr::left_join(ds_helpful) %>%
+  dplyr::left_join(ds_experience)
 
 dsm0 %>% glimpse()
 
+# dsm0 %>% make_bi_bar_graph("tx_helpful","sex")
 # ----- groom-predictors --------------------
 # create the dataset for modeling
 
@@ -334,7 +441,8 @@ dsm1 <- dsm0 %>%
     ,greek = relevel(greek, ref = "FALSE")
     ,health_major = stringr::str_detect(field_of_study,"Psychology|Health sciences" ) %>% factor()
     ,health_major = relevel(health_major, ref = "FALSE")
-    )
+    ) %>%
+  select(-race, -political, - student_type, - field_of_study)
 dsm1 %>% glimpse()
 
 # outcome = hr_support
@@ -368,103 +476,16 @@ dsm1 %>% group_by(health_major) %>% count()
 dsm2 <- dsm1 %>%
   filter(sex %in% c("Male","Female") ) %>%
   filter(class_standing %in% c("Freshman", "Sophomore","Junior","Senior")) %>%
-  filter(religion %in% c("Very important", "Moderately important", "Not important"))
+  filter(religion %in% c("Very important", "Moderately important", "Not important")) %>%
+  mutate(
+    sex = forcats::fct_drop(sex)
+    ,class_standing = forcats::fct_drop(class_standing)
+    ,religion = forcats::fct_drop(religion)
+  )
 
 # ds_model %>% distinct(health_major, field_of_study) %>% View()
 
 
-# ----- ----------------
-dsm2 %>% glimpse()
-d <- dsm2
-var1 <- "sex"
-var2 <- "class_standing"
-
-# Function for exploring relationship between two categorical variables
-make_bi_bar_graph <- function(d, var1, var2, label1, label2, labels=F){
-  # d <- dsm2
-  # var1 <- "sex"
-  # var2 <- "sex"
-  #
-  d1 <- d %>%
-    group_by(.dots = c(var1, var2) )%>%
-    summarize(
-      n_people = n()
-    ) %>%
-    ungroup() %>%
-    mutate(
-      total = sum(n_people, na.rm =T)
-    ) %>%
-    group_by(.dots = var1) %>%
-    mutate(
-      total_1 = sum(n_people, na.rm = T)
-      ,pct_1 = scales::label_percent()(total_1/total)
-      ,pct_12 = scales::label_percent()(n_people/total_1)
-    )
-  n_total = d1 %>% pull(total) %>% unique()
-
-  g1 <- d1 %>%
-    ggplot(aes_string(x = var1, y = "n_people", fill = var2 ))+
-    geom_col(position = position_dodge())+
-    geom_text(aes(label = n_people),position = position_dodge(.9), vjust = 1.5, color = "white", size = 5 )+
-    scale_fill_viridis_d(begin = 0, end = .8, direction = -1, option = "plasma")+
-    labs( title = paste0("Sample size, N = ", n_total))
-
-  if(var1 == var2){
-    g1 <- g1 +
-      geom_text(aes_string(label = "pct_1"),position = position_dodge(.9), vjust = -.5, color = "black", size = 4)
-  }else{
-    g1 <- g1 +
-      geom_text(aes_string(label = "pct_12"),position = position_dodge(.9), vjust = -.5, color = "black", size = 4)
-  }
-
-  g1
-
-}
-# How to use
-
-dsm2 %>% make_bi_bar_graph("sex","class_standing")
-dsm2 %>% make_bi_bar_graph("class_standing","sex")
-dsm2 %>% make_bi_bar_graph("sex","sex")
-dsm2 %>% make_bi_bar_graph("class_standing","class_standing")
-
-library(ggmosaic)
-# make_bi_mosaic <- function(
-
-  d <- dsm2 %>% select(sex, class_standing)
-  var1 <- "class_standing"
-  var2 <- "sex"
-
-  d1 <- d %>%
-    dplyr::rename(
-      "v1" = var1
-      ,"v2" = var2
-    ) %>%
-    mutate(
-      v1 = forcats::fct_drop(v1)
-      ,v2 = forcats::fct_drop(v2)
-    )
-
-  mosaicplot(~v1 + v2, data = d1,
-             main = paste0("Bivariate distribution between ", var1, " and ", var2)
-             ,xlab = var1, y = var2
-             ,shade = TRUE)
-
-
-
-dt1 %>%
-  ggplot(aes(x = returned_to_care, y = n_people, fill = letter_sent))+
-  geom_col(position = position_dodge())+
-  geom_text(aes(label = n_people),position = position_dodge(.9), vjust = 1.5, color = "white", size = 5 )+
-  geom_text(aes(label = pct_returned_to_care),position = position_dodge(.9), vjust = -.5, color = "blue", size = 4)+
-  scale_fill_manual(values = letter_sent_colors)+
-  scale_y_continuous(limit = c(0,450))+
-  theme_minimal()+
-  theme(legend.position = "top")+
-  labs(
-    title = "Patients returning to care after in-mail follow up"
-    ,x = "", y = "Number of patients"
-    ,fill = ""
-  )
 
 
 # --- eda-1 ---------------------
