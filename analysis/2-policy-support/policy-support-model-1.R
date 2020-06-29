@@ -193,8 +193,18 @@ make_bi_mosaic <- function(d, var1, var2){
 
 # Function to conduct an independence test between two categorical variables
 test_independence <- function(d, var1, var2){
-  d %>%
-    dplyr::select(.dots = c(var1, var2)) %>%
+  d1 <- d %>%
+    dplyr::rename(
+      "v1" = var1
+      ,"v2" = var2
+    ) %>%
+    mutate(
+      v1 = forcats::fct_drop(v1)
+      ,v2 = forcats::fct_drop(v2)
+    )
+
+  d1 %>%
+    dplyr::select(v1, v2) %>%
     sjPlot::sjtab(
       fun = "xtab"
       ,var.labels=c(var1, var2)
@@ -332,9 +342,9 @@ ds_helpful %>% group_by(tx_helpful) %>% count()
 
 ds_experience <- ds2 %>%
   mutate(
-    exp_w_1plus_oudtx = ifelse( (Q5 %in% c("I choose not to answer") | is.na(Q5) ), 0, 1)
+    exp_w_1plus_oudtx = ifelse( (Q5 %in% c("I choose not to answer") | is.na(Q5) ), 0, 1) %>% as.logical()
     ,exp_w_peer_group = stringr::str_detect(Q5, "peer support group")
-    ,exp_w_peer_group = tidyr::replace_na(exp_w_peer_group,0)
+    ,exp_w_peer_group = tidyr::replace_na(exp_w_peer_group,0) %>% as.logical()
   ) %>%
   select(ResponseId, exp_w_1plus_oudtx, exp_w_peer_group)
 # ds2 %>% distinct(Q5,exp_w_peer_group) %>% View()
@@ -459,6 +469,10 @@ predictors_00 <- c(
   ,"religion"
   ,"greek"
   ,"health_major"
+  ,"exp_w_1plus_oudtx"
+  ,"exp_w_peer_group"
+  ,"n_helpful"
+  ,"tx_helpful"
 )
 
 dsm1 %>% group_by(institution) %>% count()
@@ -471,12 +485,18 @@ dsm1 %>% group_by(religion) %>% count()
 dsm1 %>% group_by(greek) %>% count()
 dsm1 %>% group_by(health_major) %>% count()
 
+dsm1 %>% group_by(n_helpful) %>% count()
+dsm1 %>% group_by(tx_helpful) %>% count()
+
+dsm1 %>% group_by(exp_w_1plus_oudtx) %>% count()
+dsm1 %>% group_by(exp_w_peer_group) %>% count()
+
 
 # the dataset with no missing values on any of the predictors
 dsm2 <- dsm1 %>%
   filter(sex %in% c("Male","Female") ) %>%
   filter(class_standing %in% c("Freshman", "Sophomore","Junior","Senior")) %>%
-  filter(religion %in% c("Very important", "Moderately important", "Not important")) %>%
+  # filter(religion %in% c("Very important", "Moderately important", "Not important")) %>%
   mutate(
     sex = forcats::fct_drop(sex)
     ,class_standing = forcats::fct_drop(class_standing)
@@ -486,7 +506,9 @@ dsm2 <- dsm1 %>%
 # ds_model %>% distinct(health_major, field_of_study) %>% View()
 
 
-
+GGally::ggpairs(
+  dsm2 %>% select(c("hr_support", predictors_00))
+)
 
 # --- eda-1 ---------------------
 
@@ -511,7 +533,14 @@ dsm2 %>%
                         parse = TRUE)
 
 library(moderndive)
-ds_model %>% get_correlation(hr_support ~ knowledge_oud_tx)
+dsm1 %>% get_correlation(hr_support ~ knowledge_oud_tx, na.rm=T)
+dsm2 %>% get_correlation(hr_support ~ knowledge_oud_tx,na.rm = T)
+
+# ---- -----------------------
+
+dsm2 %>% make_bi_bar_graph("institution", "sex")
+dsm2 %>% make_bi_mosaic("institution", "sex")
+dsm2 %>% test_independence("institution", "sex")
 
 # ----- define-modeling-functions --------------------
 
@@ -542,9 +571,10 @@ run_regression <- function(d,p){
 # model <- lsm00$model
 
 
-make_result_table <- function(
+tabulate_coefficients <- function(
   model_object
 ){
+  # model_object <- lsm00$model
   # browser()
   (cf <- summary(model_object)$coefficients)
   # (cf <- model_object$coefficients)
@@ -559,23 +589,40 @@ make_result_table <- function(
   # }
   ds_table <- cbind.data.frame("coef_name" = rownames(cf), cf)
   row.names(ds_table) <- NULL
-  ds_table <- plyr::rename(ds_table, replace = c(
-    "Estimate" = "estimate",
-    "Std. Error"="sderr",
-    # "z value" ="zvalue",
-    "t value" ="tvalue",
-    # "Pr(>|z|)"="pvalue"
-    "Pr(>|t|)"="pvalue"
-    # "V1"="odds",
-    # "2.5 %"  = "ci95_low",
-    # "97.5 %"  ="ci95_high"
-  ))
+  # ds_table <- plyr::rename(ds_table, replace = c(
+  #   "Estimate" = "estimate",
+  #   "Std. Error"="sderr",
+  #   # "z value" ="zvalue",
+  #   "t value" ="tvalue",
+  #   # "Pr(>|z|)"="pvalue"
+  #   "Pr(>|t|)"="pvalue"
+  #   # "V1"="odds",
+  #   # "2.5 %"  = "ci95_low",
+  #   # "97.5 %"  ="ci95_high"
+  # ))
+  # ds_table$sign_ <- cut(
+  #   x = ds_table$`Pr(>|t|)`,
+  #   breaks = c(-Inf, .001, .01, .05, .10, Inf),
+  #   labels = c("<=.001", "<=.01", "<=.05", "<=.10", "> .10"), #These need to coordinate with the color specs.
+  #   right = TRUE, ordered_result = TRUE
+  # )
+  ds_table$sign <- cut(
+    x = ds_table$`Pr(>|t|)`,
+    breaks = c(-Inf, .001, .01, .05, .10, Inf),
+    labels = c("***", "**", "*", ".", " "), #These need to coordinate with the color specs.
+    right = TRUE, ordered_result = TRUE
+  )
   # prepare for display
-  ds_table$est <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$estimate, 2))
-  ds_table$se <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$sderr, 2))
-  ds_table$t <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$tvalue, 3))
+  ds_table$`Estimate` <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$`Estimate`, 2))
+  ds_table$`Std. Error` <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$`Std. Error`, 2))
+  ds_table$`t value` <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$`t value`, 3))
   # ds_table$z <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$zvalue, 3))
-  ds_table$p <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$pvalue, 4))
+  ds_table$`Pr(>|t|)` <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$`Pr(>|t|)`, 4))
+  # ds_table$est <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$estimate, 2))
+  # ds_table$se <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$sderr, 2))
+  # ds_table$t <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$tvalue, 3))
+  # # ds_table$z <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$zvalue, 3))
+  # ds_table$p <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$pvalue, 4))
   # ds_table$p <- as.numeric(round(ds_table$pvalue, 4))
   # ds_table$odds <- gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$odds, 2))
   # ds_table$odds_ci <- paste0("(",
@@ -583,36 +630,36 @@ make_result_table <- function(
   #                            gsub("^([+-])?(0)?(\\.\\d+)$", "\\1\\3", round(ds_table$ci95_high,2)), ")"
   # )
 
-  ds_table$sign_ <- cut(
-    x = ds_table$pvalue,
-    breaks = c(-Inf, .001, .01, .05, .10, Inf),
-    labels = c("<=.001", "<=.01", "<=.05", "<=.10", "> .10"), #These need to coordinate with the color specs.
-    right = TRUE, ordered_result = TRUE
-  )
-  ds_table$sign <- cut(
-    x = ds_table$pvalue,
-    breaks = c(-Inf, .001, .01, .05, .10, Inf),
-    labels = c("***", "**", "*", ".", " "), #These need to coordinate with the color specs.
-    right = TRUE, ordered_result = TRUE
-  )
+  # ds_table$sign_ <- cut(
+  #   x = ds_table$`Pr(>|t|)`,
+  #   breaks = c(-Inf, .001, .01, .05, .10, Inf),
+  #   labels = c("<=.001", "<=.01", "<=.05", "<=.10", "> .10"), #These need to coordinate with the color specs.
+  #   right = TRUE, ordered_result = TRUE
+  # )
+  # ds_table$sign <- cut(
+  #   x = ds_table$`Pr(>|t|)`,
+  #   breaks = c(-Inf, .001, .01, .05, .10, Inf),
+  #   labels = c("***", "**", "*", ".", " "), #These need to coordinate with the color specs.
+  #   right = TRUE, ordered_result = TRUE
+  # )
   # ds_table$display_odds <- paste0(ds_table$odds," ",ds_table$sign , "\n",  ds_table$odds_ci)
 
-  ds_table <- ds_table %>%
-    dplyr::select_(
-      "sign",
-      "coef_name",
-      # "odds",
-      # "odds_ci",
-      "est",
-      "se",
-      "p",
-      "sign_"
-    )
+  # ds_table <- ds_table %>%
+  #   dplyr::select_(
+  #     "sign",
+  #     "coef_name",
+  #     # "odds",
+  #     # "odds_ci",
+  #     "est",
+  #     "se",
+  #     "p",
+  #     "sign_"
+  #   )
 
   return(ds_table)
 }
 # How to use
-# model_1glm %>% make_result_table()
+# model %>% table_of_coefficients()
 
 get_rsquared <- function(m){
   cat("R-Squared, Proportion of Variance Explained = ",
@@ -643,17 +690,21 @@ predictors_00 <- c(
   ,"sex"
   ,"leaning"
   ,"religion"
-  ,"full_time"
-  # ,"greek"
+  ,"greek"
   ,"health_major"
+  ,"exp_w_1plus_oudtx"
+  ,"exp_w_peer_group"
+  ,"n_helpful"
+  ,"tx_helpful"
 )
-lsm00 <- ds_model %>% run_regression(predictors_00)
+lsm00 <- dsm2 %>% run_regression(predictors_00)
 model <- lsm00$model
 print(model$formula, showEnv = F)
+model %>% tabulate_coefficients() %>% arrange(`Pr(>|t|)`)
 model %>% get_rsquared()
 model %>% get_model_fit()
 summary(model) %>% print()
-exp(cbind(OR = coef(model), confint(model))) #%>% neat()
+exp(cbind(coef = coef(model), confint(model))) #%>% neat()
 # summary(model)$coefficients %>% neat(output_format = "pandoc") %>% print()
 # https://datascienceplus.com/perform-logistic-regression-in-r/
 anova(model, test="Chisq") %>% print()
@@ -663,13 +714,15 @@ anova(model, test="Chisq") %>% print()
 outcome <- "hr_support ~"
 # modeling the outcome using a single predictor
 
-l <- ds_model %>% run_regression("knowledge_oud_tx")
+l <- dsm2 %>% run_regression("knowledge_oud_tx")
+print(l$model$formula, showEnv = F)
 l$model %>% get_rsquared() # 0.55%
-l$model %>% make_result_table()
+l$model %>% tabulate_coefficients()
 
-l <- ds_model %>% run_regression("institution")
+l <- dsm2 %>% run_regression("institution")
+print(l$model$formula, showEnv = F)
 l$model %>% get_rsquared() # 0.45%
-l$model %>% make_result_table()
+l$model %>% tabulate_coefficients()
 
 l <- ds_model %>%
   filter(class_standing %in% c("Freshman", "Sophomore","Junior","Senior")) %>%
