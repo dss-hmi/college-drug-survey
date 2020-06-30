@@ -110,7 +110,8 @@ ds_exp_tx <- ds1 %>%
   mutate_at(varname_scale, recode_experience) %>%
   mutate(
     # the number of Tx the respondent  had experiences with)
-    n_exp_tx = rowSums(.[varname_scale], na.rm =T)
+    n_tx_experience = rowSums(.[varname_scale], na.rm =T)
+   , ResponseId = as.character(ResponseId)
   )
 
 ds_exp_tx %>% group_by(n_exp_tx) %>% count()
