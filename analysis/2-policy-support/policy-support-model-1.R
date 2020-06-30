@@ -86,7 +86,7 @@ make_corr_plot <- function (
 }
 
 rundown <- function(d, qn){
-  # d <- ds2
+  # d <- ds1
   # qn = "Q4_1"
   d %>% TabularManifest::histogram_discrete(
     qn
@@ -146,6 +146,7 @@ make_bi_bar_graph <- function(d, var1, var2, label1, label2, labels=F){
     geom_text(aes(label = n_people),position = position_dodge(.9), vjust = 1.5, color = "white", size = 5 )+
     scale_fill_viridis_d(begin = 0, end = .8, direction = -1, option = "plasma")+
     labs( title = paste0("Sample size, N = ", n_total))
+    # coord_flip()
 
   if(var1 == var2){
     g1 <- g1 +
@@ -214,19 +215,52 @@ test_independence <- function(d, var1, var2){
       ,show.exp=T
       ,show.legend=T
     )
+  # see interpretation of Phi and V
+  # http://www.people.vcu.edu/~pdattalo/702SuppRead/MeasAssoc/NominalAssoc.html
 }
 # How to use
 # dsm2 %>% test_independence("sex", "religion")
 # dsm2 %>% test_independence("religion", "class_standing")
 
+scatter_by_groups <- function(
+  d,xvar, yvar, groupvar, jitterwidth=0, jitterheight=0,  xlabel = xvar, ylabel=yvar, grouplabel=groupvar
+  ){
+  # d <- dsm2
+  # xvar = "knowledge_oud_tx"
+  # xvar = "n_helpful"
+  # yvar = "hr_support"
+  # groupvar = "sex"
 
+  g1 <- d %>%
+  ggplot(aes_string(x = xvar, y = yvar, color = groupvar))+
+
+    geom_point(shape = 21, size = 3, alpha = .6,
+    position = position_jitter(width=jitterwidth,height = jitterheight, seed = 42))+
+    scale_color_viridis_d(begin = 0, end = .6, option = "plasma")+
+    geom_smooth(method="lm", se = F)+
+    ggpmisc::stat_poly_eq(formula = y ~ + x ,
+                          aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                          parse = TRUE)+
+    labs(
+      title = paste0("Relationship between (", yvar,") and (", xvar,") for different levels of (",groupvar,")"),
+      caption = paste0("N = ", nrow(d)),
+      x = xlabel,
+      y = ylabel,
+      color = grouplabel
+    )
+    return(g1)
+
+}
+# How to use:
+dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex")
+dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex",1,0)
+dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex",1,0,"Knowledge of OUD Tx","HR Policy Support", "Sex")
 # ---- load-data ---------------------------------------------------------------
 # the production of the dto object is now complete
 # we verify its structure and content:
 ds0 <- readr::read_rds(config$oud_first_look)
 ds_meta <- readr::read_csv(config$survey_meta)
 
-# ---- inspect-data -------------------------------------------------------------
 
 # ---- add-new-names -----------------
 demographic <- c(
@@ -287,9 +321,10 @@ ds_meta <- dplyr::left_join(
   dplyr::select(q_name, item_name, dplyr::everything())
 
 # ---- tweak-data -----------------------------------------------------------
-ds2 <- ds0
+# Recode variables
+ds1 <- ds0
 
-ds_demo <- ds2 %>%
+ds_demo <- ds1 %>%
   select(c("ResponseId", names(demographic)))
 names(ds_demo) <- c("ResponseId", demographic)
 
@@ -304,7 +339,7 @@ recode_opioid <- function(x){
   "
   )
 }
-ds_opioid <- ds2 %>%
+ds_opioid <- ds1 %>%
   select(c("ResponseId", starts_with("Q4_")) ) %>%
   compute_total_score(rec_guide = recode_opioid) %>%
   rename("knowledge_oud_tx" = "total_score")
@@ -324,8 +359,8 @@ recode_helpful <- function(x){
   )
 }
 
-varname_scale <- ds2 %>% select(starts_with("Q6_")) %>% names()
-ds_helpful <- ds2 %>%
+varname_scale <- ds1 %>% select(starts_with("Q6_")) %>% names()
+ds_helpful <- ds1 %>%
   select(c("ResponseId", starts_with("Q6_")) ) %>%
   dplyr::mutate_at(varname_scale, recode_helpful) %>%
   dplyr::mutate_at(varname_scale, as.character) %>%
@@ -340,14 +375,14 @@ ds_helpful %>% group_by(n_helpful) %>% count()
 ds_helpful %>% group_by(tx_helpful) %>% count()
 
 
-ds_experience <- ds2 %>%
+ds_experience <- ds1 %>%
   mutate(
     exp_w_1plus_oudtx = ifelse( (Q5 %in% c("I choose not to answer") | is.na(Q5) ), 0, 1) %>% as.logical()
     ,exp_w_peer_group = stringr::str_detect(Q5, "peer support group")
     ,exp_w_peer_group = tidyr::replace_na(exp_w_peer_group,0) %>% as.logical()
   ) %>%
   select(ResponseId, exp_w_1plus_oudtx, exp_w_peer_group)
-# ds2 %>% distinct(Q5,exp_w_peer_group) %>% View()
+# ds1 %>% distinct(Q5,exp_w_peer_group) %>% View()
 
 ds_experience %>% group_by(exp_w_peer_group) %>% count()
 ds_experience %>% group_by(exp_w_1plus_oudtx) %>% count()
@@ -368,32 +403,14 @@ recode_support <- function(x){
   )
 }
 
-ds_support <- ds2 %>%
+# subset ds1 with Q15 questions on Policy Support
+ds_support <- ds1 %>%
   select(c("ResponseId", starts_with("Q15_")) ) %>%
   compute_total_score(rec_guide = recode_support) %>%
   rename("hr_support" = "total_score")
 
-
-# ---- q15-1 -------------
-cat("\n SECTION Q15 \n"
-    , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
-)
-cat("\n From the total of ", ds2 %>% n_distinct("ResponseId"), "respondents, only ",
-    ds_support %>% n_distinct("RespondentId"), " have provided complete and meaningful responses to all of the questions in section Q15")
-
-# Responses `Unsure`, `I choose not to answer` and `I do not know what this policy is/means` have been converted to NA values in order to compute the overal score of HR policy support.
-
-ds_support %>% TabularManifest::histogram_continuous(
-  "hr_support"
-  ,main_title = paste0("Total score for supporting harm reduction policies")
-  ,sub_title = paste0("\n (+2)Strongly Support, (+1)Support, (0)Neutral, (-1)Oppose, (-2)Strongly Oppose"), x_title = "Support for HR policies"
-  ,bin_width = 1
-)+labs(caption = paste0("Based on complete and meaningful responses, N = ",ds_support %>%  n_distinct("RespondentId"),"\n value is on the interval [-14, 14]"))
-skimr::skim(ds_support)
-
-# ----- create-ds-for-model -----------------
-
-# Individuals for whom the total HM_SUPPORT score could be computed (N = 725)
+# Assemble the predictors to be used in modeling:
+# Keep only th individuals for whom the total HM_SUPPORT score could be computed (N = 725)
 dsm0 <-
   ds_support %>% select(ResponseId, hr_support) %>%
   dplyr::left_join(ds_demo ) %>%
@@ -424,10 +441,10 @@ dsm1 <- dsm0 %>%
       ,"IUB" = "Indiana University-Bloomington"
     )
     ,over21 = forcats::fct_recode(age
-      ,"TRUE" = "31-40 years old"
-      ,"TRUE" = "21-30 years old"
-      ,"TRUE" = "61+ years old"
-      ,"FALSE" = "Under 20 years old"
+                                  ,"TRUE" = "31-40 years old"
+                                  ,"TRUE" = "21-30 years old"
+                                  ,"TRUE" = "61+ years old"
+                                  ,"FALSE" = "Under 20 years old"
     )
     ,over21 = relevel(over21, ref = "FALSE")
     ,nonwhite = ifelse(race == "White/Caucasian", FALSE, TRUE)
@@ -444,14 +461,14 @@ dsm1 <- dsm0 %>%
       , "other" = "Other"
       , "other" = "Unsure"
       , "other" = "I choose not to answer"
-      )
+    )
     ,leaning = forcats::fct_relevel(leaning, "right","middle", "left", "other")
     # ,full_time = stringr::str_detect(student_type,"I am a full-time student") %>% factor()
     ,greek = stringr::str_detect(student_type, "I am a fraternity or sorority member") %>% factor()
     ,greek = relevel(greek, ref = "FALSE")
     ,health_major = stringr::str_detect(field_of_study,"Psychology|Health sciences" ) %>% factor()
     ,health_major = relevel(health_major, ref = "FALSE")
-    ) %>%
+  ) %>%
   select(-race, -political, - student_type, - field_of_study)
 dsm1 %>% glimpse()
 
@@ -503,6 +520,23 @@ dsm2 <- dsm1 %>%
     ,religion = forcats::fct_drop(religion)
   )
 
+# ---- target-outcome -------------
+cat("\n SECTION Q15 \n"
+    , ds_meta %>% filter(q_name == "Q15_1") %>% pull(section)
+)
+cat("\n From the total of ", ds1 %>% n_distinct("ResponseId"), "respondents, only ",
+    ds_support %>% n_distinct("RespondentId"), " have provided responses to all of the questions in section Q15.\n
+    Responses `Unsure`, `I choose not to answer` and `I do not know what this policy is/means` have been converted to NA values in order to compute the overall score of HR policy support.")
+
+# Responses `Unsure`, `I choose not to answer` and `I do not know what this policy is/means` have been converted to NA values in order to compute the overall score of HR policy support.
+
+ds_support %>% TabularManifest::histogram_continuous(
+  "hr_support"
+  ,main_title = paste0("Total score for supporting harm reduction policies")
+  ,sub_title = paste0("\nResponse values: (-2)Strongly Oppose, (-1)Oppose, (0)Neutral, (+1)Support, (+2)Strongly Support"), x_title = "Support for HR policies"
+  ,bin_width = 1
+)+labs(caption = paste0("Based on complete and meaningful responses, N = ",ds_support %>%  n_distinct("RespondentId"),"\n value is on the interval [-14, 14]"))
+skimr::skim(ds_support)
 # ds_model %>% distinct(health_major, field_of_study) %>% View()
 
 
@@ -535,6 +569,7 @@ dsm2 %>%
 library(moderndive)
 dsm1 %>% get_correlation(hr_support ~ knowledge_oud_tx, na.rm=T)
 dsm2 %>% get_correlation(hr_support ~ knowledge_oud_tx,na.rm = T)
+dsm2 %>% get_correlation(sex ~ class_standing,na.rm = T)
 
 # ---- -----------------------
 
@@ -542,6 +577,11 @@ dsm2 %>% make_bi_bar_graph("institution", "sex")
 dsm2 %>% make_bi_mosaic("institution", "sex")
 dsm2 %>% test_independence("institution", "sex")
 
+
+dsm2 %>% make_bi_bar_graph("class_standing", "sex")
+dsm2 %>% make_bi_bar_graph("sex", "class_standing")
+dsm2 %>% make_bi_mosaic("class_standing", "sex")
+dsm2 %>% test_independence("class_standing", "sex")
 # ----- define-modeling-functions --------------------
 
 run_regression <- function(d,p){
