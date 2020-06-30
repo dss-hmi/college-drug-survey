@@ -1,0 +1,105 @@
+---
+title: "Policy Support"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    keep_md: no
+    toc_float: true
+    code_folding: hide
+  word_document:
+    keep_md: no
+    toc: no
+---
+This report explores the relationships between respondent characteristics and the support for harm reduction policies.  
+
+<!-- These two chunks should be added in the beginning of every .Rmd that you want to source an .R script -->
+<!--  The 1st mandatory chunck  -->
+<!--  Set the working directory to the repository's base directory -->
+```{r, echo=F, message=F} 
+#Don't combine this call with any other chunk 
+# cat("Working directory: ", getwd()) # check where you are
+  library(knitr)
+# Rmd is in "./reports/reportA/reportA.Rmd", but now the root is "./"
+  knitr::opts_knit$set(root.dir='../../') 
+```
+
+<!--  The 2nd mandatory chunck  -->
+<!-- Set the report-wide options, and point to the external code file. -->
+```{r set_options, echo=F}
+# set options shared by all chunks
+opts_chunk$set(
+  results='show', 
+  message = TRUE,
+  comment = NA, 
+  tidy = FALSE,
+  fig.height = 5, 
+  fig.width = 9, 
+  out.width = "900px",
+  fig.path = 'figure_rmd/',     
+  dev = "png",
+  dpi = 200
+  # fig.path = 'figure_pdf/',     
+  # dev = "pdf"#,
+  # dev.args=list(pdf = list(colormodel = 'cmyk'))
+)
+echoChunks <- TRUE
+options(width=120) #So the output is 50% wider than the default.
+# connect to the file with the underlying R script  
+read_chunk("./analysis/2-policy-support/policy-support.R") 
+```
+
+## Environment 
+This section offers technical detail on the environment and data preparation. Non-technical readers should feel free to skip. 
+```{r load-packages, echo=echoChunks, message=FALSE}
+```
+
+```{r load-sources, echo=echoChunks, message=FALSE}
+```
+
+```{r declare-globals, echo=echoChunks, results='show', message=FALSE}
+```
+
+```{r load-data, echo=echoChunks, results='hide', message=FALSE}
+```
+
+```{r inspect-data, echo=echoChunks, results='show', message=FALSE}
+```
+
+```{r add-new-names, echo=echoChunks, results='show', message=FALSE}
+```
+
+```{r tweak-data, echo=echoChunks, results='show', message=FALSE}
+```
+
+```{r tweak-data-1, echo=echoChunks, results='show', message=FALSE}
+```
+
+# (Q15) Policy Support
+```{r q15-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+
+```{r support-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+```{r support-2, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+```{r support-3, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+# (Q4) Knowledge of OUD Tx
+
+```{r q4, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+
+```{r knowledge-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+```{r knowledge-2, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
+
+```{r knowledge-3, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```
