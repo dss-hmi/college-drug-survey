@@ -1,5 +1,5 @@
 ---
-title: "Policy Support"
+title: "Policy Support: Individual Predictors"
 output:
   html_document:
     toc: true
@@ -7,11 +7,8 @@ output:
     keep_md: no
     toc_float: true
     code_folding: hide
-  word_document:
-    keep_md: no
-    toc: no
 ---
-This report explores the relationships between respondent characteristics and the support for harm reduction policies.  
+The support for harm reduction policies is evaluated in association with individual features of the sample. 
 
 <!-- These two chunks should be added in the beginning of every .Rmd that you want to source an .R script -->
 <!--  The 1st mandatory chunck  -->
@@ -46,7 +43,7 @@ opts_chunk$set(
 echoChunks <- TRUE
 options(width=120) #So the output is 50% wider than the default.
 # connect to the file with the underlying R script  
-read_chunk("./analysis/2-policy-support/policy-support.R") 
+read_chunk("./analysis/2-policy-support/policy-support-model-1.R") 
 ```
 
 ## Environment 
@@ -72,34 +69,64 @@ This section offers technical detail on the environment and data preparation. No
 ```{r tweak-data, echo=echoChunks, results='show', message=FALSE}
 ```
 
-```{r tweak-data-1, echo=echoChunks, results='show', message=FALSE}
-```
-
-# (Q15) Policy Support
-```{r q15-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r groom-predictors, echo=echoChunks, results='hide', message=FALSE}
 ```
 
 
-```{r support-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+# Target: Policy Support (Q15)
+
+```{r target-outcome, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
-```{r support-2, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+# Explanatory Variables
+
+While ```r dsm1 %>% nrow()``` observation of the total score on Harm Reduction Policies support were available, some of the predictors were missing or had underrepresented levels. We remove these observation forr the ease of interpretation and modeling parsimony. 
+
+```{r}
+dsm1 %>% group_by(sex) %>% count()
+sex_valid_set <- c("Male","Female")
+cat(dsm1 %>% filter(!sex %in%  sex_valid_set) %>% nrow(), " observations were dropped that did not belong to the set (", paste0(sex_valid_set, collapse = " , "), ")")
+
+
+dsm1 %>% group_by(class_standing) %>% count()
+class_standing_valid_set <- c("Freshman", "Sophomore","Junior","Senior")
+cat(dsm1 %>% filter(!class_standing %in%  class_standing_valid_set) %>% nrow(), " observations were dropped that did not belong to the set (", paste0(class_standing_valid_set, collapse = " , "), ")")
+
+
+dsm1 %>% group_by(religion) %>% count()
+religion_valid_set <- c("Very important", "Moderately important", "Not important")
+cat(dsm1 %>% filter(!religion %in%  religion_valid_set) %>% nrow(), " observations were dropped that did not belong to the set (", paste0(religion_valid_set, collapse = " , "), ")")
+
+cat(dsm1 %>% filter(is.na(knowledge_oud_tx)) %>% nrow(), " cases were dropped because they missed the value on `knoweldge_oud_tx` variable")
+
 ```
 
-```{r support-3, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
-```
+Thus, the total of ```r (nrow(dsm1) - nrow(dsm2))``` of observation was removed, resulting in ```r nrow(dsm2)``` complete cases, the descriptive statistics for which are presented below. 
 
-# (Q4) Knowledge of OUD Tx
-
-```{r q4, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
+```{r explanatory-variables, echo=TRUE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
 ```
 
 
-```{r knowledge-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
-```
+<!-- ```{r support-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T} -->
+<!-- ``` -->
 
-```{r knowledge-2, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
-```
+<!-- ```{r support-2, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T} -->
+<!-- ``` -->
 
-```{r knowledge-3, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T}
-```
+<!-- ```{r support-3, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T} -->
+<!-- ``` -->
+
+<!-- # (Q4) Knowledge of OUD Tx -->
+
+<!-- ```{r q4, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T} -->
+<!-- ``` -->
+
+
+<!-- ```{r knowledge-1, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T} -->
+<!-- ``` -->
+
+<!-- ```{r knowledge-2, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T} -->
+<!-- ``` -->
+
+<!-- ```{r knowledge-3, echo=FALSE, results='show', message=FALSE, out.width ="900px", warning=FALSE, cache = T} -->
+<!-- ``` -->
