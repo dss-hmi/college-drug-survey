@@ -227,7 +227,7 @@ scatter_by_groups <- function(
   ){
   # d <- dsm2
   # xvar = "knowledge_oud_tx"
-  # xvar = "n_helpful"
+  # xvar = "n_tx_helpful"
   # yvar = "hr_support"
   # groupvar = "sex"
 
@@ -252,9 +252,9 @@ scatter_by_groups <- function(
 
 }
 # How to use:
-dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex")
-dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex",1,0)
-dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex",1,0,"Knowledge of OUD Tx","HR Policy Support", "Sex")
+# dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex")
+# dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex",1,0)
+# dsm2 %>% scatter_by_groups("knowledge_oud_tx","hr_support","sex",1,0,"Knowledge of OUD Tx","HR Policy Support", "Sex")
 # ---- load-data ---------------------------------------------------------------
 # the production of the dto object is now complete
 # we verify its structure and content:
@@ -344,6 +344,7 @@ ds_opioid <- ds1 %>%
   compute_total_score(rec_guide = recode_opioid) %>%
   rename("knowledge_oud_tx" = "total_score")
 
+
 # Q6 - BELIEF IN USEFULNESS OF TH TREATMENT
 recode_helpful <- function(x){
   car::recode(var = x, recodes =
@@ -366,26 +367,36 @@ ds_helpful <- ds1 %>%
   dplyr::mutate_at(varname_scale, as.character) %>%
   dplyr::mutate_at(varname_scale, as.integer) %>%
   mutate(
-    n_helpful = rowSums(.[varname_scale], na.rm =T)
-    ,tx_helpful = (n_helpful > 0)
+    # the number of Tx the respondent believed to be helpful (i.e "Very Helpful" or "Somewhat Helpful")
+    n_tx_helpful = rowSums(.[varname_scale], na.rm =T)
+    ,tx_helpful = (n_tx_helpful > 0) %>% factor()
+    ,tx_helpful = relevel(tx_helpful, ref = "FALSE")
   ) %>%
-  select(ResponseId, n_helpful, tx_helpful)
+  select(ResponseId, n_tx_helpful, tx_helpful)
 
-ds_helpful %>% group_by(n_helpful) %>% count()
-ds_helpful %>% group_by(tx_helpful) %>% count()
+# ds_helpful %>% group_by(n_tx_helpful) %>% count()
+# ds_helpful %>% group_by(tx_helpful) %>% count()
+
+# Q5 - Experience with Treatments
+ds_exp_tx <- readr::read_rds("./data-unshared/derived/ds_exp_tx.rds") %>%
+  select(ResponseId, n_tx_experience ) %>%
+  mutate(
+    n_tx_experience = as.integer(n_tx_experience)
+  )
 
 
 ds_experience <- ds1 %>%
   mutate(
-    exp_w_1plus_oudtx = ifelse( (Q5 %in% c("I choose not to answer") | is.na(Q5) ), 0, 1) %>% as.logical()
-    ,exp_w_peer_group = stringr::str_detect(Q5, "peer support group")
-    ,exp_w_peer_group = tidyr::replace_na(exp_w_peer_group,0) %>% as.logical()
+    exp_w_peer_group = stringr::str_detect(Q5, "peer support group")
+    ,exp_w_peer_group = tidyr::replace_na(exp_w_peer_group,0) %>% as.logical() %>% factor()
+    ,exp_w_peer_group = relevel(exp_w_peer_group, ref = "FALSE")
   ) %>%
-  select(ResponseId, exp_w_1plus_oudtx, exp_w_peer_group)
+  select(ResponseId, exp_w_peer_group) %>%
+  dplyr::left_join(ds_exp_tx, by = "ResponseId")
+rm(ds_exp_tx)
 # ds1 %>% distinct(Q5,exp_w_peer_group) %>% View()
-
-ds_experience %>% group_by(exp_w_peer_group) %>% count()
-ds_experience %>% group_by(exp_w_1plus_oudtx) %>% count()
+# ds_experience %>% group_by(exp_w_peer_group) %>% count()
+# ds_experience %>% group_by(n_tx_experience) %>% count()
 
 # q15 - POLICY SUPPORT
 recode_support <- function(x){
@@ -418,8 +429,8 @@ dsm0 <-
   dplyr::left_join(ds_helpful) %>%
   dplyr::left_join(ds_experience)
 
-dsm0 %>% glimpse()
-
+# dsm0 %>% glimpse()
+# skimr::skim(dsm0)
 # dsm0 %>% make_bi_bar_graph("tx_helpful","sex")
 # ----- groom-predictors --------------------
 # create the dataset for modeling
@@ -443,11 +454,12 @@ dsm1 <- dsm0 %>%
     ,over21 = forcats::fct_recode(age
                                   ,"TRUE" = "31-40 years old"
                                   ,"TRUE" = "21-30 years old"
+                                  ,"TRUE" = "51-60 years old"
                                   ,"TRUE" = "61+ years old"
                                   ,"FALSE" = "Under 20 years old"
     )
     ,over21 = relevel(over21, ref = "FALSE")
-    ,nonwhite = ifelse(race == "White/Caucasian", FALSE, TRUE)
+    ,nonwhite = ifelse(race == "White/Caucasian", FALSE, TRUE) %>% as.factor()
     ,leaning = forcats::fct_recode(
       political
       , "left" = "Democrat"
@@ -468,14 +480,13 @@ dsm1 <- dsm0 %>%
     ,greek = relevel(greek, ref = "FALSE")
     ,health_major = stringr::str_detect(field_of_study,"Psychology|Health sciences" ) %>% factor()
     ,health_major = relevel(health_major, ref = "FALSE")
-  ) %>%
-  select(-race, -political, - student_type, - field_of_study)
-dsm1 %>% glimpse()
-
+  )
+# dsm1 %>% glimpse()
+# dsm1 %>% skimr::skim()
 # outcome = hr_support
 # predictors
 # the list of predictors we want to use
-predictors_00 <- c(
+predictors_000 <- c(
   "knowledge_oud_tx"
   ,"institution"
   ,"class_standing"
@@ -486,10 +497,10 @@ predictors_00 <- c(
   ,"religion"
   ,"greek"
   ,"health_major"
-  ,"exp_w_1plus_oudtx"
-  ,"exp_w_peer_group"
-  ,"n_helpful"
-  ,"tx_helpful"
+  ,"n_tx_experience"          #
+  ,"exp_w_peer_group"  # use this or `exp_w_1plus_oudtx`
+  ,"n_tx_helpful"         # use this or `tx_helpful`
+  ,"tx_helpful"        # use this or `n_tx_helpful`
 )
 
 dsm1 %>% group_by(institution) %>% count()
@@ -498,27 +509,37 @@ dsm1 %>% group_by(over21) %>% count()
 dsm1 %>% group_by(nonwhite) %>% count()
 dsm1 %>% group_by(sex) %>% count()
 dsm1 %>% group_by(leaning) %>% count()
+dsm1 %>% group_by(political, leaning) %>% count() %>% arrange(leaning)
+
 dsm1 %>% group_by(religion) %>% count()
 dsm1 %>% group_by(greek) %>% count()
 dsm1 %>% group_by(health_major) %>% count()
 
-dsm1 %>% group_by(n_helpful) %>% count()
+dsm1 %>% group_by(n_tx_helpful) %>% count()
 dsm1 %>% group_by(tx_helpful) %>% count()
 
-dsm1 %>% group_by(exp_w_1plus_oudtx) %>% count()
+
+dsm1 %>% group_by(n_tx_experience) %>% count()
 dsm1 %>% group_by(exp_w_peer_group) %>% count()
+table(dsm1$n_tx_experience, dsm1$exp_w_peer_group)
 
-
+# ---- explanatory-variables -----------------------
 # the dataset with no missing values on any of the predictors
 dsm2 <- dsm1 %>%
+  filter(!is.na(knowledge_oud_tx)) %>%
   filter(sex %in% c("Male","Female") ) %>%
   filter(class_standing %in% c("Freshman", "Sophomore","Junior","Senior")) %>%
-  # filter(religion %in% c("Very important", "Moderately important", "Not important")) %>%
+  filter(religion %in% c("Very important", "Moderately important", "Not important")) %>%
   mutate(
     sex = forcats::fct_drop(sex)
     ,class_standing = forcats::fct_drop(class_standing)
     ,religion = forcats::fct_drop(religion)
-  )
+  ) %>%
+  select("ResponseId","hr_support",predictors_000)
+skimr::skim(dsm2)
+
+# ----- explanatory-variables-1 --------------------
+skimr::skim(dsm1)
 
 # ---- target-outcome -------------
 cat("\n SECTION Q15 \n"
@@ -536,43 +557,29 @@ ds_support %>% TabularManifest::histogram_continuous(
   ,sub_title = paste0("\nResponse values: (-2)Strongly Oppose, (-1)Oppose, (0)Neutral, (+1)Support, (+2)Strongly Support"), x_title = "Support for HR policies"
   ,bin_width = 1
 )+labs(caption = paste0("Based on complete and meaningful responses, N = ",ds_support %>%  n_distinct("RespondentId"),"\n value is on the interval [-14, 14]"))
-skimr::skim(ds_support)
+# skimr::skim(ds_support)
 # ds_model %>% distinct(health_major, field_of_study) %>% View()
 
+varname_scale <- ds1 %>% select(starts_with("Q15_")) %>% names()
+ds_support_full <- ds1 %>%
+  select(ResponseId, varname_scale) %>%
+  mutate_at(varname_scale, recode_support) %>%
+  mutate_at(varname_scale, as.integer) %>%
+  dplyr::left_join(ds_support %>% select(ResponseId, hr_support))
 
-GGally::ggpairs(
-  dsm2 %>% select(c("hr_support", predictors_00))
-)
+# ds_meta %>% filter(q_name %in% varname_scale) %>% pull(q_label)
+# ds_support_full %>% names()
+skimr::skim(ds_support_full)
 
-# --- eda-1 ---------------------
 
-ds_model %>% TabularManifest::histogram_continuous("hr_support")
-ds_model %>% TabularManifest::histogram_continuous("knowledge_oud_tx")
+# ---- predictors-0 ---------------------------
+# some predictors exist almost on a numeric scale
 
-set.seed(42)
-dsm2 %>%
-  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = institution))+
-  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = class_standing))+
-  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = over21))+
-  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = nonwhite))+
-  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = sex))+
-  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = leaning))+
-  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = religion))+
-  # ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = greek))+
-  ggplot(aes(x = knowledge_oud_tx, y = hr_support,color = health_major))+
-  geom_jitter()+
-  geom_smooth(method="lm", se = F)+
-  ggpmisc::stat_poly_eq(formula = y ~ + x ,
-                        aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
-                        parse = TRUE)
+dsm2 %>% scatter_by_groups("n_tx_experience", "hr_support", "sex")
+dsm2 %>% scatter_by_groups("n_tx_helpful", "hr_support", "sex")
 
-library(moderndive)
-dsm1 %>% get_correlation(hr_support ~ knowledge_oud_tx, na.rm=T)
-dsm2 %>% get_correlation(hr_support ~ knowledge_oud_tx,na.rm = T)
-dsm2 %>% get_correlation(sex ~ class_standing,na.rm = T)
 
-# ---- -----------------------
-
+# ----- ---------
 dsm2 %>% make_bi_bar_graph("institution", "sex")
 dsm2 %>% make_bi_mosaic("institution", "sex")
 dsm2 %>% test_independence("institution", "sex")
@@ -585,8 +592,8 @@ dsm2 %>% test_independence("class_standing", "sex")
 # ----- define-modeling-functions --------------------
 
 run_regression <- function(d,p){
-  # d <- ds_model
-  # p <- var_predictors
+  # d <- dsm2
+  p <- predictors_00
   # outcome <- "hr_support ~ "
   #
   # browser()
@@ -609,7 +616,6 @@ run_regression <- function(d,p){
 # How to use
 # lsm00 <- ds_modeling %>% run_regression(predictors_00)
 # model <- lsm00$model
-
 
 tabulate_coefficients <- function(
   model_object
@@ -732,9 +738,9 @@ predictors_00 <- c(
   ,"religion"
   ,"greek"
   ,"health_major"
-  ,"exp_w_1plus_oudtx"
+  ,"n_tx_experience"
   ,"exp_w_peer_group"
-  ,"n_helpful"
+  ,"n_tx_helpful"
   ,"tx_helpful"
 )
 lsm00 <- dsm2 %>% run_regression(predictors_00)
@@ -1017,3 +1023,15 @@ ds_opioid %>%
 
 
 
+
+
+# ----- publisher --------------------
+path <- "./analysis/2-policy-support/policy-support-model-1.Rmd"
+rmarkdown::render(
+  input = path ,
+  output_format=c(
+    "html_document"
+    # ,"word_document"
+  ),
+  clean=TRUE
+)
