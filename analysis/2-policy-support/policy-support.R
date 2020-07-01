@@ -321,6 +321,9 @@ ds_opioid %>% TabularManifest::histogram_continuous(
   ,bin_width = 1
 )
 
+
+
+
 # ---- knowledge-1 -----------------
 
 # Knowledge for OUD treatment does not appear to differ by sex
