@@ -3,3 +3,4 @@ default:
     survey_items:       "./data-public/metadata/survey_items.csv"
     survey_meta:        "./data-public/metadata/survey_meta.csv"
     oud_survey:         "./data-unshared/derived/oud_survey.csv"
+    oud_first_look:     "./data-unshared/derived/dto-first-look.rds"
